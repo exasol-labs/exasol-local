@@ -131,13 +131,7 @@ prompt_sql_session() {
     [nN]) return 0 ;;
   esac
 
-  if ! command -v exapump > /dev/null 2>&1; then
-    echo "exapump is not installed. To install it, run:"
-    echo "  curl -fsSL https://raw.githubusercontent.com/exasol-labs/exapump/main/install.sh | sh"
-    return 0
-  fi
-
-  exapump sql \
+  exapump interactive \
     --dsn 'exasol://sys:exasol@localhost:8563?tls=true&validateservercertificate=0'
 }
 
