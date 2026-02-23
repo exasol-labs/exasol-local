@@ -11,16 +11,25 @@ After the Exasol container is running, gives the user the opportunity to load a 
 - The `upload` command auto-creates the target table if it does not exist.
 - The table name is derived from the file's base name with its extension removed (e.g. `sales_data.csv` → `sales_data`).
 - The script runs with `set -euo pipefail`; exapump failures propagate as non-zero exits.
+- The prompt reads from `/dev/tty` directly so it works when the script is piped (e.g. `curl | sh`).
+- The default answer is **Y** (proceed); only `n` or `N` skips the import.
 
 ## Scenarios
 
 ### Scenario: User declines import
 
 * *GIVEN* the Exasol container is running and the database is ready
-* *WHEN* `install.sh` prompts "Do you want to load a data file into Exasol? [y/N]"
-* *AND* the user enters "n", "N", or presses Enter (empty)
+* *WHEN* `install.sh` prompts "Load a CSV or Parquet file into Exasol? [Y/n]"
+* *AND* the user enters "n" or "N"
 * *THEN* the script SHALL NOT prompt for a schema name or file path
 * *AND* the script SHALL NOT invoke `exapump`
+
+### Scenario: User accepts import with Enter (default Y)
+
+* *GIVEN* the Exasol container is running and the database is ready
+* *WHEN* `install.sh` prompts "Load a CSV or Parquet file into Exasol? [Y/n]"
+* *AND* the user presses Enter without typing (empty input)
+* *THEN* the script SHALL proceed to the exapump check (Enter = accept)
 
 ### Scenario: exapump not installed
 
@@ -60,6 +69,7 @@ After the Exasol container is running, gives the user the opportunity to load a 
 | Scenario | Test type | File |
 |---|---|---|
 | User declines import | Unit | `tests/data_import.bats` |
+| User accepts import with Enter (default Y) | Unit | `tests/data_import.bats` |
 | exapump not installed | Unit | `tests/data_import.bats` |
 | Successful CSV import | Unit | `tests/data_import.bats` |
 | Successful Parquet import | Unit | `tests/data_import.bats` |
