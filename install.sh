@@ -85,9 +85,7 @@ open_admin_ui() {
 
 
 # Prompts the user to optionally load a CSV or Parquet file via exapump.
-# Skips silently if the user declines; prints a hint if exapump is absent.
-# Prompts the user to optionally load a CSV or Parquet file via exapump.
-# Reads from stdin; callers redirect from /dev/tty so this works even in curl|sh.
+# Reads from stdin; main() redirects from /dev/tty so this works even in curl|sh.
 # Skips silently if the user declines; prints a hint if exapump is absent.
 prompt_data_import() {
   local answer schema file table
@@ -99,7 +97,7 @@ prompt_data_import() {
 
   if ! command -v exapump > /dev/null 2>&1; then
     echo "exapump is not installed. To install it, run:"
-    echo "  curl -fsSL https://install.exapump.io | sh"
+    echo "  curl -fsSL https://raw.githubusercontent.com/exasol-labs/exapump/main/install.sh | sh"
     return 0
   fi
 
@@ -112,7 +110,7 @@ prompt_data_import() {
 
   exapump upload "$file" \
     --table "${schema}.${table}" \
-    --dsn "exasol://sys:exasol@localhost:8563"
+    --dsn "exasol://sys:exasol@localhost:8563?tls=true&validateservercertificate=0"
 }
 
 main() {
