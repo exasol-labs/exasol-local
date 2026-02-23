@@ -107,7 +107,11 @@ prompt_data_import() {
   read -r file
   table="$(basename "$file")"
   table="${table%.*}"
-
+  
+  exapump sql \
+    "CREATE SCHEMA IF NOT EXISTS ${schema}" \
+    --dsn "exasol://sys:exasol@localhost:8563?tls=true&validateservercertificate=0" \
+  && \
   exapump upload "$file" \
     --table "${schema}.${table}" \
     --dsn 'exasol://sys:exasol@localhost:8563?tls=true&validateservercertificate=0'
