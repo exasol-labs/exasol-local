@@ -63,11 +63,11 @@ ensure_db_ready() {
   fi
 }
 
-# Polls TCP port $SQL_PORT until the database accepts connections or timeout.
+# Polls the admin HTTPS port until the database is fully ready or timeout.
 wait_for_ready() {
   local elapsed=0
-  echo "Waiting for database on port $SQL_PORT (timeout ${READY_TIMEOUT}s) ..."
-  while ! nc -z localhost "$SQL_PORT" 2>/dev/null; do
+  echo "Waiting for database to be ready (timeout ${READY_TIMEOUT}s) ..."
+  while ! curl -sk --max-time 2 "https://localhost:${ADMIN_PORT}/" >/dev/null 2>&1; do
     if (( elapsed >= READY_TIMEOUT )); then
       echo "ERROR: database startup timed out after ${READY_TIMEOUT}s" >&2
       return 1

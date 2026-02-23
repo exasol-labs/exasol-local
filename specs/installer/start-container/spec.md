@@ -74,9 +74,18 @@ Starts a local Exasol database container and surfaces connection details so a us
 * *GIVEN* Docker is running
 * *AND* no container named `exasol-local` exists
 * *WHEN* `install.sh` is executed
-* *AND* the database does not accept TCP connections on port `8563` within 120 seconds
+* *AND* the Admin HTTPS endpoint `https://localhost:8443/` does not respond within 120 seconds
 * *THEN* the script SHALL print an error message indicating the startup timed out
 * *AND* the script SHALL exit with a non-zero status code
+
+### Scenario: Database readiness via HTTPS admin port
+
+* *GIVEN* the Exasol container has been started
+* *WHEN* `wait_for_ready` polls for database readiness
+* *THEN* the script SHALL poll `https://localhost:8443/` using `curl -sk --max-time 2`
+* *AND* the script SHALL consider the database ready when `curl` exits with status 0
+* *AND* the script SHALL NOT use `nc -z` to check TCP port `8563`
+* *AND* the script SHALL print "Database is ready." once the check succeeds
 
 ## Test Coverage
 
@@ -89,6 +98,7 @@ Starts a local Exasol database container and surfaces connection details so a us
 | Container already running | Unit + E2E | `tests/start_container.bats`, `tests/e2e/install.bats` |
 | Stopped container exists | Unit | `tests/start_container.bats` |
 | Database readiness timeout | Unit | `tests/start_container.bats` |
+| Database readiness via HTTPS admin port | Unit | `tests/start_container.bats` |
 | Port 8563 accepts connections after install | E2E | `tests/e2e/install.bats` |
 
 E2E tests run locally via `make e2e-tests`. They SSH to the remote Linux machine and simulate a real user installation: `curl -fsSL <url> | sh`. Docker operations inside `install.sh` use `sudo` when required (auto-detected). The test removes any pre-existing container before the suite and cleans up after.

@@ -67,16 +67,16 @@ setup() {
 }
 
 @test "wait_for_ready succeeds when port is immediately available" {
-  nc() { return 0; }
-  export -f nc
+  curl() { return 0; }
+  export -f curl
   READY_TIMEOUT=5 run wait_for_ready
   assert_success
   assert_output --partial "Database is ready"
 }
 
 @test "wait_for_ready exits 1 on timeout" {
-  nc() { return 1; }
-  export -f nc
+  curl() { return 1; }
+  export -f curl
   READY_TIMEOUT=1 run wait_for_ready
   assert_failure
   assert_output --partial "timed out"
