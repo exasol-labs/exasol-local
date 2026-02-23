@@ -8,6 +8,7 @@ ADMIN_PORT=8443
 STOP_TIMEOUT=120
 POLL_INTERVAL=1
 READY_TIMEOUT="${READY_TIMEOUT:-120}"
+_DB_READY=false
 
 # Sets DOCKER to "docker" if the daemon is reachable without sudo, else "sudo docker".
 detect_docker_cmd() {
@@ -39,6 +40,7 @@ create_container() {
   echo "Creating and starting container $CONTAINER_NAME ..."
   $DOCKER run \
     --name "$CONTAINER_NAME" \
+    -e COSLWD_ENABLED=1 \
     -p "127.0.0.1:${SQL_PORT}:${SQL_PORT}" \
     -p "127.0.0.1:${ADMIN_PORT}:${ADMIN_PORT}" \
     --privileged \
@@ -51,6 +53,14 @@ create_container() {
 start_existing() {
   echo "Starting existing container $CONTAINER_NAME ..."
   $DOCKER start "$CONTAINER_NAME"
+}
+
+# Calls wait_for_ready at most once; subsequent calls are no-ops.
+ensure_db_ready() {
+  if [[ "$_DB_READY" == "false" ]]; then
+    wait_for_ready
+    _DB_READY=true
+  fi
 }
 
 # Polls TCP port $SQL_PORT until the database accepts connections or timeout.
@@ -91,6 +101,7 @@ open_admin_ui() {
 # Reads from stdin; main() redirects from /dev/tty so this works even in curl|sh.
 # Skips silently if the user declines; prints a hint if exapump is absent.
 prompt_data_import() {
+  local was_started="${1:-false}"
   local answer schema file table
   printf "Load a CSV or Parquet file into Exasol? [Y/n] "
   read -r answer
@@ -111,6 +122,10 @@ prompt_data_import() {
   table="$(basename "$file")"
   table="${table%.*}"
 
+  if [[ "$was_started" == "true" ]]; then
+    ensure_db_ready
+  fi
+
   exapump sql \
     "CREATE SCHEMA IF NOT EXISTS ${schema}" \
     --dsn 'exasol://sys:exasol@localhost:8563?tls=true&validateservercertificate=0' \
@@ -124,12 +139,17 @@ prompt_data_import() {
 # Reads from stdin; main() redirects from /dev/tty so this works even in curl|sh.
 # Skips silently if the user declines; prints a hint if exapump is absent.
 prompt_sql_session() {
+  local was_started="${1:-false}"
   local answer
   printf "Start an interactive SQL session? [Y/n] "
   read -r answer
   case "$answer" in
     [nN]) return 0 ;;
   esac
+
+  if [[ "$was_started" == "true" ]]; then
+    ensure_db_ready
+  fi
 
   exapump interactive \
     --dsn 'exasol://sys:exasol@localhost:8563?tls=true&validateservercertificate=0'
@@ -144,22 +164,23 @@ main() {
   local state
   state="$(check_container_state)"
 
+  local was_started=false
   case "$state" in
     running)
       echo "Container $CONTAINER_NAME is already running."
       ;;
     exited)
       start_existing
-      wait_for_ready
+      was_started=true
       ;;
     *)
       create_container
-      wait_for_ready
+      was_started=true
       ;;
   esac
 
-  prompt_data_import < "${_TTY:-/dev/tty}"
-  prompt_sql_session < "${_TTY:-/dev/tty}"
+  prompt_data_import "$was_started" < "${_TTY:-/dev/tty}"
+  prompt_sql_session "$was_started" < "${_TTY:-/dev/tty}"
   print_connection_info
   open_admin_ui
 }

@@ -42,18 +42,20 @@ After the Exasol container is running, gives the user the opportunity to load a 
 
 ### Scenario: Successful CSV import
 
-* *GIVEN* the Exasol container is running and the database is ready
+* *GIVEN* the Exasol container was just started (database may not yet be ready)
 * *AND* `exapump` is installed and available on PATH
 * *WHEN* the user enters "y", then provides schema `my_schema` and file path `/data/sales.csv`
-* *THEN* the script SHALL invoke `exapump upload /data/sales.csv --table my_schema.sales --dsn exasol://sys:exasol@localhost:8563?tls=true&validateservercertificate=0`
+* *THEN* the script SHALL wait until the database accepts TCP connections on port `8563`
+* *AND* the script SHALL invoke `exapump upload /data/sales.csv --table my_schema.sales --dsn exasol://sys:exasol@localhost:8563?tls=true&validateservercertificate=0`
 * *AND* the script SHALL print a confirmation message upon successful completion
 
 ### Scenario: Successful Parquet import
 
-* *GIVEN* the Exasol container is running and the database is ready
+* *GIVEN* the Exasol container was just started (database may not yet be ready)
 * *AND* `exapump` is installed and available on PATH
 * *WHEN* the user enters "y", then provides schema `analytics` and file path `/data/events.parquet`
-* *THEN* the script SHALL invoke `exapump upload /data/events.parquet --table analytics.events --dsn exasol://sys:exasol@localhost:8563?tls=true&validateservercertificate=0`
+* *THEN* the script SHALL wait until the database accepts TCP connections on port `8563`
+* *AND* the script SHALL invoke `exapump upload /data/events.parquet --table analytics.events --dsn exasol://sys:exasol@localhost:8563?tls=true&validateservercertificate=0`
 * *AND* the script SHALL print a confirmation message upon successful completion
 
 ### Scenario: User declines SQL session
@@ -65,10 +67,11 @@ After the Exasol container is running, gives the user the opportunity to load a 
 
 ### Scenario: User accepts SQL session with Enter (default Y)
 
-* *GIVEN* the Exasol container is running and the database is ready
+* *GIVEN* the Exasol container was just started (database may not yet be ready)
 * *WHEN* `install.sh` prompts "Start an interactive SQL session? [Y/n]"
 * *AND* the user presses Enter without typing (empty input)
-* *THEN* the script SHALL invoke `exapump sql --dsn exasol://sys:exasol@localhost:8563?tls=true&validateservercertificate=0`
+* *THEN* the script SHALL wait until the database accepts TCP connections on port `8563`
+* *AND* the script SHALL invoke `exapump interactive --dsn exasol://sys:exasol@localhost:8563?tls=true&validateservercertificate=0`
 
 ### Scenario: exapump not installed (SQL session)
 
@@ -86,6 +89,40 @@ After the Exasol container is running, gives the user the opportunity to load a 
 * *WHEN* `exapump upload` exits with a non-zero status code
 * *THEN* the script SHALL exit with a non-zero status code
 
+### Scenario: DB wait deferred until user accepts import
+
+* *GIVEN* Docker is running
+* *AND* the container was just started (state was `exited` or absent)
+* *WHEN* the script prompts "Load a CSV or Parquet file into Exasol? [Y/n]"
+* *AND* the user enters "y" or presses Enter
+* *THEN* the script SHALL wait until the database accepts TCP connections on port `8563` before invoking `exapump`
+* *AND* the script SHALL NOT have waited before showing the prompt
+
+### Scenario: DB wait deferred until user accepts SQL session
+
+* *GIVEN* Docker is running
+* *AND* the container was just started (state was `exited` or absent)
+* *AND* the user declined the data import prompt
+* *WHEN* the script prompts "Start an interactive SQL session? [Y/n]"
+* *AND* the user enters "y" or presses Enter
+* *THEN* the script SHALL wait until the database accepts TCP connections on port `8563` before invoking `exapump interactive`
+
+### Scenario: DB wait runs at most once
+
+* *GIVEN* Docker is running
+* *AND* the container was just started
+* *WHEN* the user accepts both the data import prompt and the SQL session prompt
+* *THEN* the script SHALL call `wait_for_ready` exactly once
+* *AND* the SQL session operation SHALL proceed without an additional readiness poll
+
+### Scenario: DB wait skipped when both prompts declined
+
+* *GIVEN* Docker is running
+* *AND* the container was just started
+* *WHEN* the user enters "n" at both the import prompt and the SQL session prompt
+* *THEN* the script SHALL NOT invoke `wait_for_ready` at any point
+* *AND* the script SHALL exit without polling port `8563`
+
 ## Test Coverage
 
 | Scenario | Test type | File |
@@ -100,3 +137,7 @@ After the Exasol container is running, gives the user the opportunity to load a 
 | User accepts SQL session with Enter (default Y) | Unit | `tests/data_import.bats` |
 | exapump not installed (SQL session) | Unit | `tests/data_import.bats` |
 | SQL session invokes exapump sql with DSN | Unit | `tests/data_import.bats` |
+| DB wait deferred until user accepts import | Unit | `tests/data_import.bats` |
+| DB wait deferred until user accepts SQL session | Unit | `tests/data_import.bats` |
+| DB wait runs at most once | Unit | `tests/data_import.bats` |
+| DB wait skipped when both prompts declined | Unit | `tests/data_import.bats` |
