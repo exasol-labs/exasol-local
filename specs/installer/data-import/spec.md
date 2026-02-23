@@ -45,7 +45,7 @@ After the Exasol container is running, gives the user the opportunity to load a 
 * *GIVEN* the Exasol container is running and the database is ready
 * *AND* `exapump` is installed and available on PATH
 * *WHEN* the user enters "y", then provides schema `my_schema` and file path `/data/sales.csv`
-* *THEN* the script SHALL invoke `exapump upload /data/sales.csv --table my_schema.sales --dsn exasol://sys:exasol@localhost:8563`
+* *THEN* the script SHALL invoke `exapump upload /data/sales.csv --table my_schema.sales --dsn exasol://sys:exasol@localhost:8563?tls=true&validateservercertificate=0`
 * *AND* the script SHALL print a confirmation message upon successful completion
 
 ### Scenario: Successful Parquet import
@@ -53,7 +53,7 @@ After the Exasol container is running, gives the user the opportunity to load a 
 * *GIVEN* the Exasol container is running and the database is ready
 * *AND* `exapump` is installed and available on PATH
 * *WHEN* the user enters "y", then provides schema `analytics` and file path `/data/events.parquet`
-* *THEN* the script SHALL invoke `exapump upload /data/events.parquet --table analytics.events --dsn exasol://sys:exasol@localhost:8563`
+* *THEN* the script SHALL invoke `exapump upload /data/events.parquet --table analytics.events --dsn exasol://sys:exasol@localhost:8563?tls=true&validateservercertificate=0`
 * *AND* the script SHALL print a confirmation message upon successful completion
 
 ### Scenario: Import fails

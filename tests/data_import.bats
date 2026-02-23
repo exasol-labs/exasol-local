@@ -61,7 +61,7 @@ teardown() {
   assert_success
   assert_output --partial "EXAPUMP_CALLED"
   assert_output --partial "test_schema.sales"
-  assert_output --partial "exasol://sys:exasol@localhost:8563"
+  assert_output --partial "exasol://sys:exasol@localhost:8563?tls=true&validateservercertificate=0"
 }
 
 @test "prompt_data_import derives table name correctly for Parquet file" {

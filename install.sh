@@ -110,7 +110,7 @@ prompt_data_import() {
 
   exapump upload "$file" \
     --table "${schema}.${table}" \
-    --dsn "exasol://sys:exasol@localhost:8563?tls=true&validateservercertificate=0"
+    --dsn 'exasol://sys:exasol@localhost:8563?tls=true&validateservercertificate=0'
 }
 
 main() {
