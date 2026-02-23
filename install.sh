@@ -86,13 +86,15 @@ open_admin_ui() {
 
 # Prompts the user to optionally load a CSV or Parquet file via exapump.
 # Skips silently if the user declines; prints a hint if exapump is absent.
+# Prompts the user to optionally load a CSV or Parquet file via exapump.
+# Reads from stdin; callers redirect from /dev/tty so this works even in curl|sh.
+# Skips silently if the user declines; prints a hint if exapump is absent.
 prompt_data_import() {
   local answer schema file table
-  printf "Load a CSV or Parquet file into Exasol? [y/N] "
+  printf "Load a CSV or Parquet file into Exasol? [Y/n] "
   read -r answer
   case "$answer" in
-    [yY]) ;;
-    *) return 0 ;;
+    [nN]) return 0 ;;
   esac
 
   if ! command -v exapump > /dev/null 2>&1; then
@@ -136,7 +138,7 @@ main() {
       ;;
   esac
 
-  prompt_data_import
+  prompt_data_import < "${_TTY:-/dev/tty}"
   print_connection_info
   open_admin_ui
 }
