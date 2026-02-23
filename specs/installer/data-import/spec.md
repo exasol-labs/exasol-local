@@ -1,6 +1,6 @@
 # Feature: Data Import via exapump
 
-After the Exasol container is running, gives the user the opportunity to load a CSV or Parquet file into the database using exapump, so they can immediately query their own data without any additional setup steps.
+After the Exasol container is running, gives the user the opportunity to load a CSV or Parquet file into the database and/or start an interactive SQL session via exapump, so they can immediately work with their data without any additional setup steps.
 
 ## Background
 
@@ -56,6 +56,28 @@ After the Exasol container is running, gives the user the opportunity to load a 
 * *THEN* the script SHALL invoke `exapump upload /data/events.parquet --table analytics.events --dsn exasol://sys:exasol@localhost:8563?tls=true&validateservercertificate=0`
 * *AND* the script SHALL print a confirmation message upon successful completion
 
+### Scenario: User declines SQL session
+
+* *GIVEN* the Exasol container is running and the database is ready
+* *WHEN* `install.sh` prompts "Start an interactive SQL session? [Y/n]"
+* *AND* the user enters "n" or "N"
+* *THEN* the script SHALL NOT invoke `exapump sql`
+
+### Scenario: User accepts SQL session with Enter (default Y)
+
+* *GIVEN* the Exasol container is running and the database is ready
+* *WHEN* `install.sh` prompts "Start an interactive SQL session? [Y/n]"
+* *AND* the user presses Enter without typing (empty input)
+* *THEN* the script SHALL invoke `exapump sql --dsn exasol://sys:exasol@localhost:8563?tls=true&validateservercertificate=0`
+
+### Scenario: exapump not installed (SQL session)
+
+* *GIVEN* the Exasol container is running and the database is ready
+* *AND* `exapump` is not found on the system PATH
+* *WHEN* the user enters "y" or "Y" at the SQL session prompt
+* *THEN* the script SHALL print that exapump is not installed and output the installation command
+* *AND* the script SHALL exit with status 0
+
 ### Scenario: Import fails
 
 * *GIVEN* the Exasol container is running and the database is ready
@@ -74,3 +96,7 @@ After the Exasol container is running, gives the user the opportunity to load a 
 | Successful CSV import | Unit | `tests/data_import.bats` |
 | Successful Parquet import | Unit | `tests/data_import.bats` |
 | Import fails | Unit | `tests/data_import.bats` |
+| User declines SQL session | Unit | `tests/data_import.bats` |
+| User accepts SQL session with Enter (default Y) | Unit | `tests/data_import.bats` |
+| exapump not installed (SQL session) | Unit | `tests/data_import.bats` |
+| SQL session invokes exapump sql with DSN | Unit | `tests/data_import.bats` |

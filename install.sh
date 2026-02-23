@@ -87,6 +87,9 @@ open_admin_ui() {
 # Prompts the user to optionally load a CSV or Parquet file via exapump.
 # Reads from stdin; main() redirects from /dev/tty so this works even in curl|sh.
 # Skips silently if the user declines; prints a hint if exapump is absent.
+# Prompts the user to optionally load a CSV or Parquet file via exapump.
+# Reads from stdin; main() redirects from /dev/tty so this works even in curl|sh.
+# Skips silently if the user declines; prints a hint if exapump is absent.
 prompt_data_import() {
   local answer schema file table
   printf "Load a CSV or Parquet file into Exasol? [Y/n] "
@@ -107,13 +110,34 @@ prompt_data_import() {
   read -r file
   table="$(basename "$file")"
   table="${table%.*}"
-  
+
   exapump sql \
     "CREATE SCHEMA IF NOT EXISTS ${schema}" \
-    --dsn "exasol://sys:exasol@localhost:8563?tls=true&validateservercertificate=0" \
+    --dsn 'exasol://sys:exasol@localhost:8563?tls=true&validateservercertificate=0' \
   && \
   exapump upload "$file" \
     --table "${schema}.${table}" \
+    --dsn 'exasol://sys:exasol@localhost:8563?tls=true&validateservercertificate=0'
+}
+
+# Prompts the user to optionally start an interactive SQL session via exapump.
+# Reads from stdin; main() redirects from /dev/tty so this works even in curl|sh.
+# Skips silently if the user declines; prints a hint if exapump is absent.
+prompt_sql_session() {
+  local answer
+  printf "Start an interactive SQL session? [Y/n] "
+  read -r answer
+  case "$answer" in
+    [nN]) return 0 ;;
+  esac
+
+  if ! command -v exapump > /dev/null 2>&1; then
+    echo "exapump is not installed. To install it, run:"
+    echo "  curl -fsSL https://raw.githubusercontent.com/exasol-labs/exapump/main/install.sh | sh"
+    return 0
+  fi
+
+  exapump sql \
     --dsn 'exasol://sys:exasol@localhost:8563?tls=true&validateservercertificate=0'
 }
 
@@ -141,6 +165,7 @@ main() {
   esac
 
   prompt_data_import < "${_TTY:-/dev/tty}"
+  prompt_sql_session < "${_TTY:-/dev/tty}"
   print_connection_info
   open_admin_ui
 }

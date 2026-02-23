@@ -97,10 +97,11 @@ setup() {
   create_container()      { echo "CREATE_CALLED"; }
   wait_for_ready()        { return 0; }
   prompt_data_import()    { :; }
+  prompt_sql_session()    { :; }
   print_connection_info() { :; }
   open_admin_ui()         { :; }
   export -f pull_image check_image_cached check_container_state create_container
-  export -f wait_for_ready prompt_data_import print_connection_info open_admin_ui
+  export -f wait_for_ready prompt_data_import prompt_sql_session print_connection_info open_admin_ui
 
   run main
   assert_success
@@ -115,10 +116,11 @@ setup() {
   create_container()      { :; }
   wait_for_ready()        { return 0; }
   prompt_data_import()    { :; }
+  prompt_sql_session()    { :; }
   print_connection_info() { :; }
   open_admin_ui()         { :; }
   export -f pull_image check_image_cached check_container_state create_container
-  export -f wait_for_ready prompt_data_import print_connection_info open_admin_ui
+  export -f wait_for_ready prompt_data_import prompt_sql_session print_connection_info open_admin_ui
 
   run main
   assert_success
@@ -132,10 +134,11 @@ setup() {
   start_existing()        { echo "START_CALLED"; }
   wait_for_ready()        { return 0; }
   prompt_data_import()    { :; }
+  prompt_sql_session()    { :; }
   print_connection_info() { :; }
   open_admin_ui()         { :; }
   export -f check_image_cached check_container_state create_container
-  export -f start_existing wait_for_ready prompt_data_import print_connection_info open_admin_ui
+  export -f start_existing wait_for_ready prompt_data_import prompt_sql_session print_connection_info open_admin_ui
 
   run main
   assert_success
@@ -150,10 +153,11 @@ setup() {
   create_container()      { echo "CREATE_CALLED"; }
   wait_for_ready()        { return 0; }
   prompt_data_import()    { :; }
+  prompt_sql_session()    { :; }
   print_connection_info() { :; }
   open_admin_ui()         { :; }
   export -f check_image_cached check_container_state start_existing
-  export -f create_container wait_for_ready prompt_data_import print_connection_info open_admin_ui
+  export -f create_container wait_for_ready prompt_data_import prompt_sql_session print_connection_info open_admin_ui
 
   run main
   assert_success

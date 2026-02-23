@@ -88,3 +88,52 @@ teardown() {
   "
   assert_failure
 }
+
+@test "prompt_sql_session returns 0 when user declines" {
+  echo "n" > "$TTY_INPUT"
+  run bash -c "
+    source '$SCRIPT'
+    prompt_sql_session < '$TTY_INPUT'
+  "
+  assert_success
+  refute_output --partial "exapump"
+}
+
+@test "prompt_sql_session proceeds when user presses Enter (default Y)" {
+  echo "" > "$TTY_INPUT"
+  run bash -c "
+    source '$SCRIPT'
+    command() { return 1; }
+    export -f command
+    prompt_sql_session < '$TTY_INPUT'
+  "
+  assert_success
+  assert_output --partial "exapump is not installed"
+}
+
+@test "prompt_sql_session prints hint when exapump is not installed" {
+  echo "y" > "$TTY_INPUT"
+  run bash -c "
+    source '$SCRIPT'
+    command() { return 1; }
+    export -f command
+    prompt_sql_session < '$TTY_INPUT'
+  "
+  assert_success
+  assert_output --partial "exapump is not installed"
+  assert_output --partial "curl"
+}
+
+@test "prompt_sql_session invokes exapump sql with DSN" {
+  echo "y" > "$TTY_INPUT"
+  run bash -c "
+    source '$SCRIPT'
+    command() { [[ \"\$*\" == *exapump* ]] && return 0 || builtin command \"\$@\"; }
+    exapump() { echo \"EXAPUMP_CALLED: \$*\"; }
+    export -f command exapump
+    prompt_sql_session < '$TTY_INPUT'
+  "
+  assert_success
+  assert_output --partial "EXAPUMP_CALLED: sql"
+  assert_output --partial "exasol://sys:exasol@localhost:8563?tls=true&validateservercertificate=0"
+}
