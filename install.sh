@@ -83,6 +83,36 @@ open_admin_ui() {
   xdg-open "https://localhost:${ADMIN_PORT}" > /dev/null 2>&1 || true
 }
 
+
+# Prompts the user to optionally load a CSV or Parquet file via exapump.
+# Skips silently if the user declines; prints a hint if exapump is absent.
+prompt_data_import() {
+  local answer schema file table
+  printf "Load a CSV or Parquet file into Exasol? [y/N] "
+  read -r answer
+  case "$answer" in
+    [yY]) ;;
+    *) return 0 ;;
+  esac
+
+  if ! command -v exapump > /dev/null 2>&1; then
+    echo "exapump is not installed. To install it, run:"
+    echo "  curl -fsSL https://install.exapump.io | sh"
+    return 0
+  fi
+
+  printf "Schema name: "
+  read -r schema
+  printf "File path: "
+  read -r file
+  table="$(basename "$file")"
+  table="${table%.*}"
+
+  exapump upload "$file" \
+    --table "${schema}.${table}" \
+    --dsn "exasol://sys:exasol@localhost:8563"
+}
+
 main() {
   detect_docker_cmd
   if ! check_image_cached; then
@@ -106,6 +136,7 @@ main() {
       ;;
   esac
 
+  prompt_data_import
   print_connection_info
   open_admin_ui
 }
