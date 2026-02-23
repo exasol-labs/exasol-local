@@ -54,11 +54,14 @@ start_existing() {
   $DOCKER start "$CONTAINER_NAME"
 }
 
-# Polls the admin HTTPS port until the database is fully ready or timeout.
+# Polls confd_client inside the container until the DB is running and connectable, or timeout.
 wait_for_ready() {
   local elapsed=0
+  # Script passed verbatim to bash -c inside the container; $() expands there, not here.
+  # shellcheck disable=SC2016
+  local check='[[ "$(confd_client --json db_info db_name: DB1 2>/dev/null | jq -r '\''select (.state == "running" and .connectible == "Yes") | true'\'')" == "true" ]]'
   echo "Waiting for database to be ready (timeout ${READY_TIMEOUT}s) ..."
-  while ! curl -sk --max-time 2 "https://localhost:${ADMIN_PORT}/" >/dev/null 2>&1; do
+  while ! $DOCKER exec "$CONTAINER_NAME" bash -c "$check" 2>/dev/null; do
     if (( elapsed >= READY_TIMEOUT )); then
       echo "ERROR: database startup timed out after ${READY_TIMEOUT}s" >&2
       return 1

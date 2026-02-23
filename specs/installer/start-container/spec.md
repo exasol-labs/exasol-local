@@ -78,13 +78,12 @@ Starts a local Exasol database container and surfaces connection details so a us
 * *THEN* the script SHALL print an error message indicating the startup timed out
 * *AND* the script SHALL exit with a non-zero status code
 
-### Scenario: Database readiness via HTTPS admin port
+### Scenario: Database readiness via confd_client inside container
 
 * *GIVEN* the Exasol container has been started
 * *WHEN* `wait_for_ready` polls for database readiness
-* *THEN* the script SHALL poll `https://localhost:8443/` using `curl -sk --max-time 2`
-* *AND* the script SHALL consider the database ready when `curl` exits with status 0
-* *AND* the script SHALL NOT use `nc -z` to check TCP port `8563`
+* *THEN* the script SHALL run `confd_client --json db_info db_name: DB1` inside the container via `docker exec`
+* *AND* the script SHALL consider the database ready when the result has `state == "running"` AND `connectible == "Yes"`
 * *AND* the script SHALL print "Database is ready." once the check succeeds
 
 ## Test Coverage

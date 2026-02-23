@@ -66,17 +66,17 @@ setup() {
   assert_output ""
 }
 
-@test "wait_for_ready succeeds when port is immediately available" {
-  curl() { return 0; }
-  export -f curl
+@test "wait_for_ready succeeds when container is immediately ready" {
+  docker() { return 0; }
+  export -f docker
   READY_TIMEOUT=5 run wait_for_ready
   assert_success
   assert_output --partial "Database is ready"
 }
 
 @test "wait_for_ready exits 1 on timeout" {
-  curl() { return 1; }
-  export -f curl
+  docker() { return 1; }
+  export -f docker
   READY_TIMEOUT=1 run wait_for_ready
   assert_failure
   assert_output --partial "timed out"
