@@ -153,9 +153,9 @@ ensure_exapump() {
   if command -v exapump > /dev/null 2>&1; then
     return 0
   fi
-  printf 'We could not detect exapump on your system.\n'
-  printf 'exapump is a CLI for Exasol data exchange — import, export, and SQL in one command.\n'
-  printf 'For more information see: https://github.com/exasol-labs/exapump\n\n'
+  printf '%s!%s We could not detect exapump on your system.\n ' "$RED" "$RESET"
+  printf '%s!%s exapump is a CLI for Exasol data exchange — import, export, and SQL in one command.\n ' "$RED" "$RESET"
+  printf '%s!%s For more information see: https://github.com/exasol-labs/exapump\n  ' "$RED" "$RESET"
   printf '%s?%s Do you want to install exapump now? [Y/n] ' "$CYAN" "$RESET"
   local answer
   read -r answer < "${_TTY:-/dev/tty}"
@@ -180,9 +180,11 @@ prompt_data_import() {
     [nN]) return 0 ;;
   esac
 
-  printf '%s?%s Name of schema to load the data into? If it does not exist, it will be created automatically. ' "$CYAN" "$RESET"
+  printf '%s?%s Provide the schema you want to load data into. If it does not exist, it will be created automatically.\n' "$CYAN" "$RESET"
+  printf '%s?%s Schema: ' "$CYAN" "$RESET"
   read -r schema
-  printf '%s?%s Path of the file you want to import. CSV or Parquet formats supported. Table name will be inferred from <filename>.ext. ' "$CYAN" "$RESET"
+  printf '%s?%s Path of the file you want to import. CSV or Parquet formats supported. Table name will be inferred from the name of the file.\n' "$CYAN" "$RESET"
+  printf '%s?%s File name: ' "$CYAN" "$RESET"
   read -r file
   table="$(basename "$file")"
   table="${table%.*}"
@@ -203,7 +205,7 @@ prompt_data_import() {
 # Skips silently if the user declines.
 prompt_sql_session() {
   local answer
-  printf '%s?%s Start an interactive SQL session? [Y/n] ' "$CYAN" "$RESET"
+  printf '\n%s?%s Start an interactive SQL session? [Y/n] ' "$CYAN" "$RESET"
   read -r answer
   case "$answer" in
     [nN]) return 0 ;;
@@ -239,9 +241,9 @@ main() {
       ;;
   esac
 
+  print_connection_info
   [[ "$EXAPUMP_AVAILABLE" == true ]] && prompt_data_import < "${_TTY:-/dev/tty}"
   [[ "$EXAPUMP_AVAILABLE" == true ]] && prompt_sql_session < "${_TTY:-/dev/tty}"
-  print_connection_info
 }
 
 (return 0 2>/dev/null) || main "$@"
