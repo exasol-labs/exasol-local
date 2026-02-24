@@ -8,7 +8,6 @@ Starts a local Exasol database container and surfaces connection details so a us
 - The container is always named `exasol-local`.
 - The Exasol Docker image used is `exasol/docker-db:latest`.
 - The database SQL port is `8563` mapped to `localhost:8563`.
-- The Admin UI port is `8443` mapped to `localhost:8443`.
 - Default credentials are username `sys` and password `exasol`.
 - The script is idempotent: running it multiple times MUST NOT create duplicate containers.
 - The script auto-detects whether `sudo` is required: if `docker info` succeeds without `sudo`, plain `docker` is used; otherwise `sudo docker` is used.
@@ -34,10 +33,9 @@ Starts a local Exasol database container and surfaces connection details so a us
 * *AND* the `exasol/docker-db` image is not present locally
 * *WHEN* `install.sh` is executed
 * *THEN* the script SHALL pull the `exasol/docker-db:latest` image
-* *AND* the script SHALL create and start a container named `exasol-local` with `--privileged`, `--stop-timeout 120`, port `8563` and port `8443` exposed on localhost
-* *AND* the script SHALL wait until the Admin HTTPS endpoint `https://localhost:8443/` responds
+* *AND* the script SHALL create and start a container named `exasol-local` with `--privileged`, `--stop-timeout 120`, port `8563` exposed on localhost
+* *AND* the script SHALL wait until the database is ready
 * *AND* the script SHALL print the DSN (`localhost:8563`), username (`sys`), and password (`exasol`) to stdout
-* *AND* the script SHALL open `https://localhost:8443` via `xdg-open`
 
 ### Scenario: Image already cached
 
@@ -47,7 +45,7 @@ Starts a local Exasol database container and surfaces connection details so a us
 * *WHEN* `install.sh` is executed
 * *THEN* the script SHALL NOT invoke `docker pull`
 * *AND* the script SHALL create and start the container
-* *AND* the script SHALL print connection details and open the Admin UI via `xdg-open` via `xdg-open`
+* *AND* the script SHALL print connection details
 
 ### Scenario: Container already running
 
@@ -57,7 +55,6 @@ Starts a local Exasol database container and surfaces connection details so a us
 * *THEN* the script SHALL NOT start a new container
 * *AND* the script SHALL NOT invoke `docker run` or `docker start`
 * *AND* the script SHALL print connection details to stdout
-* *AND* the script SHALL open `https://localhost:8443` via `xdg-open`
 
 ### Scenario: Stopped container exists
 
@@ -66,15 +63,15 @@ Starts a local Exasol database container and surfaces connection details so a us
 * *WHEN* `install.sh` is executed
 * *THEN* the script SHALL start the existing container with `docker start exasol-local`
 * *AND* the script SHALL NOT invoke `docker run`
-* *AND* the script SHALL wait until the Admin HTTPS endpoint `https://localhost:8443/` responds
-* *AND* the script SHALL print connection details and open the Admin UI via `xdg-open`
+* *AND* the script SHALL wait until the database is ready
+* *AND* the script SHALL print connection details
 
 ### Scenario: Database readiness timeout
 
 * *GIVEN* Docker is running
 * *AND* no container named `exasol-local` exists
 * *WHEN* `install.sh` is executed
-* *AND* the Admin HTTPS endpoint `https://localhost:8443/` does not respond within 120 seconds
+* *AND* the database does not become ready within 120 seconds
 * *THEN* the script SHALL print an error message indicating the startup timed out
 * *AND* the script SHALL exit with a non-zero status code
 
@@ -92,12 +89,12 @@ Starts a local Exasol database container and surfaces connection details so a us
 |---|---|---|
 | Docker accessible without sudo | Unit | `tests/start_container.bats` |
 | Docker requires sudo | Unit | `tests/start_container.bats` |
-| Container starts from scratch | E2E | `tests/e2e/install.bats` |
+| Container starts from scratch | E2E | `e2etest` |
 | Image already cached | Unit | `tests/start_container.bats` |
-| Container already running | Unit + E2E | `tests/start_container.bats`, `tests/e2e/install.bats` |
+| Container already running | Unit + E2E | `tests/start_container.bats`, `e2etest` |
 | Stopped container exists | Unit | `tests/start_container.bats` |
 | Database readiness timeout | Unit | `tests/start_container.bats` |
 | Database readiness via exapump SELECT 1 | Unit | `tests/start_container.bats` |
-| Port 8563 accepts connections after install | E2E | `tests/e2e/install.bats` |
+| Port 8563 accepts connections after install | E2E | `e2etest` |
 
-E2E tests run locally via `make e2e-tests`. They SSH to the remote Linux machine and simulate a real user installation: `curl -fsSL <url> | sh`. Docker operations inside `install.sh` use `sudo` when required (auto-detected). The test removes any pre-existing container before the suite and cleans up after.
+E2E tests run locally via `make e2e-tests` (executes `./e2etest`). They SSH to the remote Linux machine and simulate a real user installation: `curl -fsSL <url> | bash`. Docker operations inside `install.sh` use `sudo` when required (auto-detected). The test removes any pre-existing container before running.

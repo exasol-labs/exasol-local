@@ -4,7 +4,6 @@ set -euo pipefail
 CONTAINER_NAME="exasol-local"
 IMAGE="exasol/docker-db:latest"
 SQL_PORT=8563
-ADMIN_PORT=8443
 STOP_TIMEOUT=120
 POLL_INTERVAL=1
 READY_TIMEOUT="${READY_TIMEOUT:-120}"
@@ -41,7 +40,6 @@ create_container() {
     --name "$CONTAINER_NAME" \
     -e COSLWD_ENABLED=1 \
     -p "127.0.0.1:${SQL_PORT}:${SQL_PORT}" \
-    -p "127.0.0.1:${ADMIN_PORT}:${ADMIN_PORT}" \
     --privileged \
     --stop-timeout "$STOP_TIMEOUT" \
     --hostname n11 \
@@ -72,21 +70,14 @@ wait_for_ready() {
   echo "Database is ready."
 }
 
-# Prints DSN, username, password, and Admin UI URL to stdout.
+# Prints DSN, username, and password to stdout.
 print_connection_info() {
   echo ""
   echo "Connection details:"
   echo "  DSN:      localhost:${SQL_PORT}"
   echo "  Username: sys"
   echo "  Password: exasol"
-  echo "  Admin UI: https://localhost:${ADMIN_PORT}"
 }
-
-# Opens the Admin UI in the default browser (best-effort; silent on failure).
-open_admin_ui() {
-  xdg-open "https://localhost:${ADMIN_PORT}" > /dev/null 2>&1 || true
-}
-
 
 # Prompts the user to optionally load a CSV or Parquet file via exapump.
 # Reads from stdin; main() redirects from /dev/tty so this works even in curl|sh.
@@ -165,7 +156,6 @@ main() {
   prompt_data_import < "${_TTY:-/dev/tty}"
   prompt_sql_session < "${_TTY:-/dev/tty}"
   print_connection_info
-  open_admin_ui
 }
 
 (return 0 2>/dev/null) || main "$@"

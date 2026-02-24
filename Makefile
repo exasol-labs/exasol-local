@@ -6,7 +6,7 @@ test:
 	$(BATS) tests/start_container.bats
 
 e2e-tests:
-	$(BATS) tests/e2e/install.bats
+	./e2etest
 
 lint:
 	shellcheck install.sh
