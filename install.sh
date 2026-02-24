@@ -155,7 +155,7 @@ ensure_exapump() {
   fi
   printf '%s!%s We could not detect exapump on your system.\n' "$RED" "$RESET"
   printf '%s!%s exapump is a CLI for Exasol data exchange — import, export, and SQL in one command.\n' "$RED" "$RESET"
-  printf '%s!%s For more information see: https://github.com/exasol-labs/exapump\n ' "$RED" "$RESET"
+  printf '%s!%s For more information see: https://github.com/exasol-labs/exapump\n' "$RED" "$RESET"
   printf '%s?%s Do you want to install exapump now? [Y/n] ' "$CYAN" "$RESET"
   local answer
   read -r answer < "${_TTY:-/dev/tty}"
