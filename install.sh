@@ -44,6 +44,7 @@ create_container() {
     -p "127.0.0.1:${ADMIN_PORT}:${ADMIN_PORT}" \
     --privileged \
     --stop-timeout "$STOP_TIMEOUT" \
+    --hostname n11 \
     --detach \
     "$IMAGE"
 }
@@ -54,14 +55,13 @@ start_existing() {
   $DOCKER start "$CONTAINER_NAME"
 }
 
-# Polls confd_client inside the container until the DB is running and connectable, or timeout.
+# Runs 'SELECT 1' via exapump until the database accepts connections, or timeout.
 wait_for_ready() {
   local elapsed=0
-  # Script passed verbatim to bash -c inside the container; $() expands there, not here.
-  # shellcheck disable=SC2016
-  local check='[[ "$(confd_client --json db_info db_name: DB1 2>/dev/null | jq -r '\''select (.state == "running" and .connectible == "Yes") | true'\'')" == "true" ]]'
   echo "Waiting for database to be ready (timeout ${READY_TIMEOUT}s) ..."
-  while ! $DOCKER exec "$CONTAINER_NAME" bash -c "$check" 2>/dev/null; do
+  while ! exapump sql "SELECT 1" \
+      --dsn 'exasol://sys:exasol@localhost:8563?tls=true&validateservercertificate=0' \
+      >/dev/null 2>&1; do
     if (( elapsed >= READY_TIMEOUT )); then
       echo "ERROR: database startup timed out after ${READY_TIMEOUT}s" >&2
       return 1
