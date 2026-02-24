@@ -263,8 +263,9 @@ setup() {
   assert_output --partial "captured noise"
 }
 
-@test "print_welcome outputs exasol-local banner" {
+@test "print_welcome outputs EXASOL banner" {
   run print_welcome
   assert_success
-  assert_output --partial "exasol-local"
+  assert_output --partial "EXASOL"
+  assert_output --partial "Exasol DB"
 }

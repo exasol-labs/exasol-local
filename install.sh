@@ -23,15 +23,15 @@ _ICON_ARROW="${CYAN}›${RESET}"
 _SPINNER_CHARS=('⣾' '⣽' '⣻' '⢿' '⡿' '⣟' '⣯' '⣷')
 _SPINNER_PID=""
 
-log_step()    { printf "  ${DIM}%s${RESET}\\n" "$*"; }
-log_success() { printf "  ${_ICON_OK} %s\\n" "$*"; }
-log_error()   { printf "  ${_ICON_FAIL} %s\\n" "$*" >&2; }
+log_step()    { printf "${DIM}%s${RESET}\\n" "$*"; }
+log_success() { printf "${_ICON_OK} %s\\n" "$*"; }
+log_error()   { printf "${_ICON_FAIL} %s\\n" "$*" >&2; }
 
 start_spinner() {
   local label="$1"
   local i=0
   while true; do
-    printf "\r  ${CYAN}%s${RESET} %s " "${_SPINNER_CHARS[$((i % 8))]}" "$label"
+    printf "\r${CYAN}%s${RESET} %s " "${_SPINNER_CHARS[$((i % 8))]}" "$label"
     sleep 0.1
     i=$(( i + 1 ))
   done &
@@ -66,8 +66,8 @@ run_with_spinner() {
 }
 
 print_welcome() {
-  printf '\n%s  exasol-local%s\n' "$BOLD" "$RESET"
-  printf '  %sStart a local Exasol database in seconds.%s\n\n' "$DIM" "$RESET"
+  printf '\n%s%sEXASOL%s\n' "$BOLD" "$GREEN" "$RESET"
+  printf '%sStart a Docker container with an Exasol DB%s\n\n' "$DIM" "$RESET"
 }
 
 # Sets DOCKER to "docker" if the daemon is reachable without sudo, else "sudo docker".
@@ -129,7 +129,7 @@ wait_for_ready() {
       log_error "Database startup timed out after ${READY_TIMEOUT}s"
       return 1
     fi
-    printf '\r  %s%s%s Waiting for database … %ds ' \
+    printf '\r%s%s%s Waiting for database … %ds ' \
       "$CYAN" "${_SPINNER_CHARS[$((frame % 8))]}" "$RESET" "$elapsed"
     sleep "$POLL_INTERVAL"
     elapsed=$(( elapsed + 1 ))
@@ -141,10 +141,10 @@ wait_for_ready() {
 
 # Prints DSN, username, and password to stdout.
 print_connection_info() {
-  printf '\n%s  Connection details:%s\n' "$BOLD" "$RESET"
-  printf '  %sDSN:%s      localhost:%s\n' "$DIM" "$RESET" "$SQL_PORT"
-  printf '  %sUsername:%s sys\n' "$DIM" "$RESET"
-  printf '  %sPassword:%s exasol\n' "$DIM" "$RESET"
+  printf '\n%sConnection details:%s\n' "$BOLD" "$RESET"
+  printf '%sDSN:%s      localhost:%s\n' "$DIM" "$RESET" "$SQL_PORT"
+  printf '%sUsername:%s sys\n' "$DIM" "$RESET"
+  printf '%sPassword:%s exasol\n' "$DIM" "$RESET"
 }
 
 # Checks whether exapump is available; prompts to install it if not.
@@ -153,12 +153,10 @@ ensure_exapump() {
   if command -v exapump > /dev/null 2>&1; then
     return 0
   fi
-  printf '  %s exapump enables:\n' "$_ICON_ARROW"
-  printf '  %s  database readiness wait (polls until Exasol accepts connections)\n' "$_ICON_ARROW"
-  printf '  %s  CSV / Parquet import  (upload local files directly into Exasol)\n' "$_ICON_ARROW"
-  printf '  %s  interactive SQL shell  (query Exasol from the terminal)\n' "$_ICON_ARROW"
-  printf '\n'
-  printf '  %s?%s Install exapump now? [Y/n] ' "$CYAN" "$RESET"
+  printf 'We could not detect exapump on your system.\n'
+  printf 'exapump is a CLI for Exasol data exchange — import, export, and SQL in one command.\n'
+  printf 'For more information see: https://github.com/exasol-labs/exapump\n\n'
+  printf '%s?%s Do you want to install exapump now? [Y/n] ' "$CYAN" "$RESET"
   local answer
   read -r answer < "${_TTY:-/dev/tty}"
   case "$answer" in
@@ -176,15 +174,15 @@ ensure_exapump() {
 # Skips silently if the user declines.
 prompt_data_import() {
   local answer schema file table
-  printf '  %s?%s Load a CSV or Parquet file into Exasol? [Y/n] ' "$CYAN" "$RESET"
+  printf '%s?%s Load a CSV or Parquet file into Exasol? [Y/n] ' "$CYAN" "$RESET"
   read -r answer
   case "$answer" in
     [nN]) return 0 ;;
   esac
 
-  printf "Schema name: "
+  printf '%s?%s Name of schema to load the data into? If it does not exist, it will be created automatically. ' "$CYAN" "$RESET"
   read -r schema
-  printf "File path: "
+  printf '%s?%s Path of the file you want to import. CSV or Parquet formats supported. Table name will be inferred from <filename>.ext. ' "$CYAN" "$RESET"
   read -r file
   table="$(basename "$file")"
   table="${table%.*}"
@@ -205,12 +203,13 @@ prompt_data_import() {
 # Skips silently if the user declines.
 prompt_sql_session() {
   local answer
-  printf '  %s?%s Start an interactive SQL session? [Y/n] ' "$CYAN" "$RESET"
+  printf '%s?%s Start an interactive SQL session? [Y/n] ' "$CYAN" "$RESET"
   read -r answer
   case "$answer" in
     [nN]) return 0 ;;
   esac
 
+  printf '\n'
   exapump interactive \
     --dsn 'exasol://sys:exasol@localhost:8563?tls=true&validateservercertificate=0'
 }
