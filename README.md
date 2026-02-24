@@ -1,6 +1,6 @@
-# exasol-local
+# Exasol Local
 
-Get a local [Exasol](https://www.exasol.com) database running in seconds — one command, no configuration.
+Run a local [Exasol](https://www.exasol.com) database running in seconds — one command, no configuration.
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/juergen-albertsen-exasol/exasol-local/main/install.sh | bash
@@ -12,7 +12,8 @@ curl -fsSL https://raw.githubusercontent.com/juergen-albertsen-exasol/exasol-loc
 2. Starts a container named `exasol-local` with sensible defaults
 3. Waits until the database accepts connections
 4. Prints connection details ready to paste into any SQL client
-5. Opens the Admin UI in your browser
+5. Offers to import a CSV or Parquet file directly into Exasol
+6. Offers to start an interactive SQL session
 
 The script is **idempotent** — running it again on a machine that already has the container is safe.
 
@@ -20,7 +21,8 @@ The script is **idempotent** — running it again on a machine that already has 
 
 - Linux
 - [Docker Engine](https://docs.docker.com/engine/install/)
-- `sudo` access is used automatically if Docker is not accessible without it
+- `sudo` access if Docker is not accessible without it. Is used automatically when required.
+- [exapump](https://github.com/exasol-labs/exapump) — installed automatically if not present; powers the DB readiness check, data import, and interactive SQL session
 
 ## Connection details
 
@@ -33,17 +35,4 @@ The script is **idempotent** — running it again on a machine that already has 
 
 ## Re-running
 
-If the container is already running, the script prints the connection details and exits — no duplicate containers are created. If the container exists but is stopped, it is restarted.
-
-## Development
-
-```sh
-# Run unit tests
-make test
-
-# Lint
-make lint
-
-# Run e2e integration tests (requires remote/host and remote/key.pem)
-make e2e-tests
-```
+If the container is already running, the script prints the connection details and exits — no duplicate containers are created. If the container exists but is stopped, it is restarted
