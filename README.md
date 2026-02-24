@@ -3,7 +3,7 @@
 Run a local [Exasol](https://www.exasol.com) database running in seconds — one command, no configuration.
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/juergen-albertsen-exasol/exasol-local/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/exasol-labs/exasol-local/main/install.sh | bash
 ```
 
 ## What it does
