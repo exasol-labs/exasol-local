@@ -7,6 +7,7 @@ SQL_PORT=8563
 STOP_TIMEOUT=120
 POLL_INTERVAL=1
 READY_TIMEOUT="${READY_TIMEOUT:-120}"
+EXAPUMP_AVAILABLE=true
 
 # Sets DOCKER to "docker" if the daemon is reachable without sudo, else "sudo docker".
 detect_docker_cmd() {
@@ -79,12 +80,28 @@ print_connection_info() {
   echo "  Password: exasol"
 }
 
+# Checks whether exapump is available; prompts to install it if not.
+# Sets EXAPUMP_AVAILABLE=false if the user declines installation.
+ensure_exapump() {
+  if command -v exapump > /dev/null 2>&1; then
+    return 0
+  fi
+  echo "exapump enables: database readiness wait, CSV/Parquet data import, and interactive SQL sessions."
+  printf "Install exapump now? [Y/n] "
+  local answer
+  read -r answer < "${_TTY:-/dev/tty}"
+  case "$answer" in
+    [nN])
+      EXAPUMP_AVAILABLE=false
+      return
+      ;;
+  esac
+  curl -fsSL https://raw.githubusercontent.com/exasol-labs/exapump/main/install.sh | sh
+}
+
 # Prompts the user to optionally load a CSV or Parquet file via exapump.
 # Reads from stdin; main() redirects from /dev/tty so this works even in curl|sh.
-# Skips silently if the user declines; prints a hint if exapump is absent.
-# Prompts the user to optionally load a CSV or Parquet file via exapump.
-# Reads from stdin; main() redirects from /dev/tty so this works even in curl|sh.
-# Skips silently if the user declines; prints a hint if exapump is absent.
+# Skips silently if the user declines.
 prompt_data_import() {
   local answer schema file table
   printf "Load a CSV or Parquet file into Exasol? [Y/n] "
@@ -92,12 +109,6 @@ prompt_data_import() {
   case "$answer" in
     [nN]) return 0 ;;
   esac
-
-  if ! command -v exapump > /dev/null 2>&1; then
-    echo "exapump is not installed. To install it, run:"
-    echo "  curl -fsSL https://raw.githubusercontent.com/exasol-labs/exapump/main/install.sh | sh"
-    return 0
-  fi
 
   printf "Schema name: "
   read -r schema
@@ -117,7 +128,7 @@ prompt_data_import() {
 
 # Prompts the user to optionally start an interactive SQL session via exapump.
 # Reads from stdin; main() redirects from /dev/tty so this works even in curl|sh.
-# Skips silently if the user declines; prints a hint if exapump is absent.
+# Skips silently if the user declines.
 prompt_sql_session() {
   local answer
   printf "Start an interactive SQL session? [Y/n] "
@@ -132,6 +143,7 @@ prompt_sql_session() {
 
 main() {
   detect_docker_cmd
+  ensure_exapump
   if ! check_image_cached; then
     pull_image
   fi
@@ -145,16 +157,16 @@ main() {
       ;;
     exited)
       start_existing
-      wait_for_ready
+      [[ "$EXAPUMP_AVAILABLE" == true ]] && wait_for_ready
       ;;
     *)
       create_container
-      wait_for_ready
+      [[ "$EXAPUMP_AVAILABLE" == true ]] && wait_for_ready
       ;;
   esac
 
-  prompt_data_import < "${_TTY:-/dev/tty}"
-  prompt_sql_session < "${_TTY:-/dev/tty}"
+  [[ "$EXAPUMP_AVAILABLE" == true ]] && prompt_data_import < "${_TTY:-/dev/tty}"
+  [[ "$EXAPUMP_AVAILABLE" == true ]] && prompt_sql_session < "${_TTY:-/dev/tty}"
   print_connection_info
 }
 

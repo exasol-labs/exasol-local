@@ -6,7 +6,7 @@ After the Exasol container is running, gives the user the opportunity to load a 
 
 - The Exasol container is running and the database accepts connections on `localhost:8563`.
 - Default credentials are username `sys` and password `exasol`.
-- exapump CLI (`exapump`) may or may not be installed on the host machine.
+- exapump is installed and available on PATH (ensured by `ensure_exapump` at startup).
 - exapump's DSN format is `exasol://user:password@host:port`.
 - The `upload` command auto-creates the target table if it does not exist.
 - The table name is derived from the file's base name with its extension removed (e.g. `sales_data.csv` → `sales_data`).
@@ -30,15 +30,6 @@ After the Exasol container is running, gives the user the opportunity to load a 
 * *WHEN* `install.sh` prompts "Load a CSV or Parquet file into Exasol? [Y/n]"
 * *AND* the user presses Enter without typing (empty input)
 * *THEN* the script SHALL proceed to the exapump check (Enter = accept)
-
-### Scenario: exapump not installed
-
-* *GIVEN* the Exasol container is running and the database is ready
-* *AND* `exapump` is not found on the system PATH
-* *WHEN* the user enters "y" or "Y" at the import prompt
-* *THEN* the script SHALL print that exapump is not installed and output the installation command `curl -fsSL https://raw.githubusercontent.com/exasol-labs/exapump/main/install.sh | sh`
-* *AND* the script SHALL NOT invoke `exapump`
-* *AND* the script SHALL exit with status 0
 
 ### Scenario: Successful CSV import
 
@@ -70,13 +61,13 @@ After the Exasol container is running, gives the user the opportunity to load a 
 * *AND* the user presses Enter without typing (empty input)
 * *THEN* the script SHALL invoke `exapump interactive --dsn exasol://sys:exasol@localhost:8563?tls=true&validateservercertificate=0`
 
-### Scenario: exapump not installed (SQL session)
+### Scenario: exapump not available - all prompts skipped
 
-* *GIVEN* the Exasol container is running and the database is ready
-* *AND* `exapump` is not found on the system PATH
-* *WHEN* the user enters "y" or "Y" at the SQL session prompt
-* *THEN* the script SHALL print that exapump is not installed and output the installation command
-* *AND* the script SHALL exit with status 0
+* *GIVEN* the Exasol container is running
+* *AND* exapump was not installed and the user declined installation at startup
+* *WHEN* `main` reaches the post-container phase
+* *THEN* the script SHALL NOT prompt for data import
+* *AND* the script SHALL NOT prompt for an interactive SQL session
 
 ### Scenario: Import fails
 
@@ -92,11 +83,10 @@ After the Exasol container is running, gives the user the opportunity to load a 
 |---|---|---|
 | User declines import | Unit | `tests/data_import.bats` |
 | User accepts import with Enter (default Y) | Unit | `tests/data_import.bats` |
-| exapump not installed | Unit | `tests/data_import.bats` |
 | Successful CSV import | Unit | `tests/data_import.bats` |
 | Successful Parquet import | Unit | `tests/data_import.bats` |
 | Import fails | Unit | `tests/data_import.bats` |
 | User declines SQL session | Unit | `tests/data_import.bats` |
 | User accepts SQL session with Enter (default Y) | Unit | `tests/data_import.bats` |
-| exapump not installed (SQL session) | Unit | `tests/data_import.bats` |
+| exapump not available - all prompts skipped | Unit | `tests/start_container.bats` |
 | SQL session invokes exapump sql with DSN | Unit | `tests/data_import.bats` |

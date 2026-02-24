@@ -95,13 +95,14 @@ setup() {
   check_image_cached()    { return 1; }
   check_container_state() { echo ""; }
   create_container()      { echo "CREATE_CALLED"; }
+  ensure_exapump()        { :; }
   wait_for_ready()        { return 0; }
   prompt_data_import()    { :; }
   prompt_sql_session()    { :; }
   print_connection_info() { :; }
   open_admin_ui()         { :; }
   export -f pull_image check_image_cached check_container_state create_container
-  export -f wait_for_ready prompt_data_import prompt_sql_session print_connection_info open_admin_ui
+  export -f ensure_exapump wait_for_ready prompt_data_import prompt_sql_session print_connection_info open_admin_ui
 
   run main
   assert_success
@@ -114,13 +115,14 @@ setup() {
   check_image_cached()    { return 0; }
   check_container_state() { echo ""; }
   create_container()      { :; }
+  ensure_exapump()        { :; }
   wait_for_ready()        { return 0; }
   prompt_data_import()    { :; }
   prompt_sql_session()    { :; }
   print_connection_info() { :; }
   open_admin_ui()         { :; }
   export -f pull_image check_image_cached check_container_state create_container
-  export -f wait_for_ready prompt_data_import prompt_sql_session print_connection_info open_admin_ui
+  export -f ensure_exapump wait_for_ready prompt_data_import prompt_sql_session print_connection_info open_admin_ui
 
   run main
   assert_success
@@ -132,13 +134,14 @@ setup() {
   check_container_state() { echo "running"; }
   create_container()      { echo "CREATE_CALLED"; }
   start_existing()        { echo "START_CALLED"; }
+  ensure_exapump()        { :; }
   wait_for_ready()        { return 0; }
   prompt_data_import()    { :; }
   prompt_sql_session()    { :; }
   print_connection_info() { :; }
   open_admin_ui()         { :; }
   export -f check_image_cached check_container_state create_container
-  export -f start_existing wait_for_ready prompt_data_import prompt_sql_session print_connection_info open_admin_ui
+  export -f start_existing ensure_exapump wait_for_ready prompt_data_import prompt_sql_session print_connection_info open_admin_ui
 
   run main
   assert_success
@@ -151,16 +154,77 @@ setup() {
   check_container_state() { echo "exited"; }
   start_existing()        { echo "START_CALLED"; }
   create_container()      { echo "CREATE_CALLED"; }
+  ensure_exapump()        { :; }
   wait_for_ready()        { return 0; }
   prompt_data_import()    { :; }
   prompt_sql_session()    { :; }
   print_connection_info() { :; }
   open_admin_ui()         { :; }
   export -f check_image_cached check_container_state start_existing
-  export -f create_container wait_for_ready prompt_data_import prompt_sql_session print_connection_info open_admin_ui
+  export -f create_container ensure_exapump wait_for_ready prompt_data_import prompt_sql_session print_connection_info open_admin_ui
 
   run main
   assert_success
   assert_output --partial "START_CALLED"
   refute_output --partial "CREATE_CALLED"
+}
+
+@test "ensure_exapump sets EXAPUMP_AVAILABLE=true when exapump is on PATH" {
+  command() {
+    if [[ "$*" == *exapump* ]]; then return 0; fi
+    builtin command "$@"
+  }
+  export -f command
+  ensure_exapump
+  assert_equal "$EXAPUMP_AVAILABLE" "true"
+}
+
+@test "ensure_exapump installs and keeps EXAPUMP_AVAILABLE=true when user accepts" {
+  command() {
+    if [[ "$*" == *exapump* ]]; then return 1; fi
+    builtin command "$@"
+  }
+  curl() { return 0; }
+  export -f command curl
+  _TTY=$(mktemp)
+  echo "Y" > "$_TTY"
+  export _TTY
+  run ensure_exapump
+  assert_success
+  assert_equal "$EXAPUMP_AVAILABLE" "true"
+  rm -f "$_TTY"
+}
+
+@test "ensure_exapump sets EXAPUMP_AVAILABLE=false when user declines" {
+  command() {
+    if [[ "$*" == *exapump* ]]; then return 1; fi
+    builtin command "$@"
+  }
+  export -f command
+  _TTY=$(mktemp)
+  echo "n" > "$_TTY"
+  export _TTY
+  ensure_exapump
+  assert_equal "$EXAPUMP_AVAILABLE" "false"
+  rm -f "$_TTY"
+}
+
+@test "main skips wait_for_ready, prompt_data_import, and prompt_sql_session when EXAPUMP_AVAILABLE is false" {
+  detect_docker_cmd()     { :; }
+  ensure_exapump()        { EXAPUMP_AVAILABLE=false; }
+  check_image_cached()    { return 0; }
+  check_container_state() { echo ""; }
+  create_container()      { :; }
+  wait_for_ready()        { echo "WAIT_SENTINEL"; }
+  prompt_data_import()    { echo "IMPORT_SENTINEL"; }
+  prompt_sql_session()    { echo "SQL_SENTINEL"; }
+  print_connection_info() { :; }
+  export -f detect_docker_cmd ensure_exapump check_image_cached check_container_state
+  export -f create_container wait_for_ready prompt_data_import prompt_sql_session print_connection_info
+
+  run main
+  assert_success
+  refute_output --partial "WAIT_SENTINEL"
+  refute_output --partial "IMPORT_SENTINEL"
+  refute_output --partial "SQL_SENTINEL"
 }
