@@ -98,6 +98,7 @@ check_container_state() {
 # Creates and starts a new detached container.
 create_container() {
   # shellcheck disable=SC2086
+  printf '\n'
   run_with_spinner "Creating container $CONTAINER_NAME" \
     $DOCKER run \
     --name "$CONTAINER_NAME" \
@@ -174,7 +175,7 @@ ensure_exapump() {
 # Skips silently if the user declines.
 prompt_data_import() {
   local answer schema file table
-  printf '%s?%s Load a CSV or Parquet file into Exasol? [Y/n] ' "$CYAN" "$RESET"
+  printf '%s?%s \nLoad a CSV or Parquet file into Exasol? [Y/n] ' "$CYAN" "$RESET"
   read -r answer
   case "$answer" in
     [nN]) return 0 ;;
