@@ -23,6 +23,14 @@ setup() {
 }
 
 @test "detect_docker_cmd sets DOCKER='sudo docker' when docker info fails" {
+  # setup() stubs detect_docker_cmd; restore the real implementation here
+  detect_docker_cmd() {
+    if docker info > /dev/null 2>&1; then
+      DOCKER="docker"
+    else
+      DOCKER="sudo docker"
+    fi
+  }
   docker() { return 1; }
   export -f docker
   detect_docker_cmd
@@ -227,4 +235,36 @@ setup() {
   refute_output --partial "WAIT_SENTINEL"
   refute_output --partial "IMPORT_SENTINEL"
   refute_output --partial "SQL_SENTINEL"
+}
+
+@test "log_success outputs success icon and message" {
+  run log_success "step done"
+  assert_success
+  assert_output --partial "step done"
+}
+
+@test "log_error outputs failure message to stderr" {
+  run log_error "something failed"
+  assert_output --partial "something failed"
+}
+
+@test "run_with_spinner succeeds and calls log_success" {
+  run run_with_spinner "test label" true
+  assert_success
+  assert_output --partial "test label"
+}
+
+@test "run_with_spinner fails and replays captured output" {
+  failing_cmd() { echo "captured noise"; return 1; }
+  export -f failing_cmd
+  run run_with_spinner "bad step" failing_cmd
+  assert_failure
+  assert_output --partial "bad step"
+  assert_output --partial "captured noise"
+}
+
+@test "print_welcome outputs exasol-local banner" {
+  run print_welcome
+  assert_success
+  assert_output --partial "exasol-local"
 }

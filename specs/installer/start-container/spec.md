@@ -95,10 +95,9 @@ Starts a local Exasol database container and surfaces connection details so a us
 
 * *GIVEN* `exapump` is not available on the system PATH
 * *WHEN* `install.sh` is executed
-* *THEN* the script SHALL display a brief overview of exapump's purpose: waiting for the database to be ready, loading CSV or Parquet files, and starting interactive SQL sessions
-* *AND* the script SHALL prompt "Install exapump now? [Y/n]"
-* *AND* when the user confirms (Y or Enter), the script SHALL run `curl -fsSL https://raw.githubusercontent.com/exasol-labs/exapump/main/install.sh | sh`
-* *AND* the script SHALL continue with full functionality after installation
+* *THEN* the script SHALL display bullet points explaining what exapump enables (database readiness wait, CSV/Parquet import, interactive SQL sessions) and that the installer works without it
+* *AND* the script SHALL prompt with a cyan `?` prefix: `? Install exapump now? [Y/n]`
+* *AND* when the user confirms, the script SHALL install exapump via curl with a spinner and continue with full functionality
 
 ### Scenario: exapump not installed, user declines installation
 
