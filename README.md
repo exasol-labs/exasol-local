@@ -35,7 +35,7 @@ The script is **idempotent** — running it again on a machine that already has 
 
 ## 📋 Requirements
 
-- Linux
+- Linux on an x86_64 architecture
 - [Docker Engine](https://docs.docker.com/engine/install/)
 - `sudo` access if Docker is not accessible without it. Is used automatically when required.
 - [exapump](https://github.com/exasol-labs/exapump) — installed automatically if not present; powers the DB readiness check, data import, and interactive SQL session
