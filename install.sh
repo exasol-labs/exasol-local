@@ -99,7 +99,7 @@ check_container_state() {
 create_container() {
   # shellcheck disable=SC2086
   printf '\n'
-  run_with_spinner "Creating container $CONTAINER_NAME" \
+  run_with_spinner "Starting Docker container '$CONTAINER_NAME'" \
     $DOCKER run \
     --name "$CONTAINER_NAME" \
     -e COSLWD_ENABLED=1 \
@@ -175,7 +175,7 @@ ensure_exapump() {
 # Skips silently if the user declines.
 prompt_data_import() {
   local answer schema file table
-  printf '%s?%s \nLoad a CSV or Parquet file into Exasol? [Y/n] ' "$CYAN" "$RESET"
+  printf '\n%s?%s Load a CSV or Parquet file into Exasol? [Y/n] ' "$CYAN" "$RESET"
   read -r answer
   case "$answer" in
     [nN]) return 0 ;;
