@@ -68,7 +68,7 @@ run_with_spinner() {
 
 print_welcome() {
   printf '\n%s%sEXASOL%s\n' "$BOLD" "$GREEN" "$RESET"
-  printf '%Run an Exasol DB in a local Docker container\n\n' "$DIM" "$RESET"
+  printf 'Run an Exasol DB in a local Docker container\n\n' "$DIM" "$RESET"
   printf '%s?%s Let''s prepare your environment.\n\n' "$CYAN" "$RESET"
 }
 
@@ -218,7 +218,7 @@ prompt_data_import() {
 # Sets EXA_VOLUME to the entered path, or /var/exa if the user presses Enter.
 prompt_volume() {
   local input
-  printf '%sThe Exasol Docker contrainer needs to mount a local folder at /exa where all Exasol data is stored.%s\n' "$DIM" "$RESET"
+  printf '%sThe Exasol Docker container needs to mount a local folder at /exa where all Exasol data is stored.%s\n' "$DIM" "$RESET"
   printf '%s?%s Path to the local folder to be mounted [/var/exa]: ' "$CYAN" "$RESET"
   read -r input
   EXA_VOLUME="${input:-/var/exa}"

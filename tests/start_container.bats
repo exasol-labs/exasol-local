@@ -304,7 +304,7 @@ setup() {
   echo '' > "$_TTY"
   export _TTY
   run prompt_volume < "$_TTY"
-  assert_output --partial 'Local folder'
+  assert_output --partial 'local folder at /exa'
   assert_output --partial '[/var/exa]'
   rm -f "$_TTY"
 }
