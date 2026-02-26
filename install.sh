@@ -8,6 +8,7 @@ STOP_TIMEOUT=120
 POLL_INTERVAL=1
 READY_TIMEOUT="${READY_TIMEOUT:-120}"
 EXAPUMP_AVAILABLE=true
+EXA_VOLUME=""
 
 # ── UI: ANSI color codes and icon constants ─────────────────────────────────
 BOLD=$'\033[1m'
@@ -97,8 +98,17 @@ check_container_state() {
 
 # Creates and starts a new detached container.
 create_container() {
-  # shellcheck disable=SC2086
+  local volume_args=()
+  if [[ -n "$EXA_VOLUME" ]]; then
+    volume_args=(--volume "${EXA_VOLUME}:/exa")
+    if [[ "$DOCKER" == "sudo docker" ]]; then
+      sudo mkdir -p "$EXA_VOLUME"
+    else
+      mkdir -p "$EXA_VOLUME"
+    fi
+  fi
   printf '\n'
+  # shellcheck disable=SC2086
   run_with_spinner "Starting Docker container '$CONTAINER_NAME'" \
     $DOCKER run \
     --name "$CONTAINER_NAME" \
@@ -108,6 +118,7 @@ create_container() {
     --stop-timeout "$STOP_TIMEOUT" \
     --hostname n11 \
     --detach \
+    ${volume_args[@]+"${volume_args[@]}"} \
     "$IMAGE"
 }
 
@@ -201,6 +212,17 @@ prompt_data_import() {
     --dsn 'exasol://sys:exasol@localhost:8563?tls=true&validateservercertificate=0'
 }
 
+# Prompts the user for a local folder to bind-mount at /exa in the container.
+# Reads from stdin; main() redirects from /dev/tty so this works even in curl|sh.
+# Sets EXA_VOLUME to the entered path, or /var/exa if the user presses Enter.
+prompt_volume() {
+  local input
+  printf '%sLocal folder to mount at /exa inside the Docker container.\nAll Exasol data and configuration is stored here and persists across container restarts and removals.%s\n' "$DIM" "$RESET"
+  printf '%s?%s Local folder [/var/exa]: ' "$CYAN" "$RESET"
+  read -r input
+  EXA_VOLUME="${input:-/var/exa}"
+}
+
 # Prompts the user to optionally start an interactive SQL session via exapump.
 # Reads from stdin; main() redirects from /dev/tty so this works even in curl|sh.
 # Skips silently if the user declines.
@@ -237,6 +259,7 @@ main() {
       [[ "$EXAPUMP_AVAILABLE" == true ]] && wait_for_ready
       ;;
     *)
+      prompt_volume < "${_TTY:-/dev/tty}"
       create_container
       [[ "$EXAPUMP_AVAILABLE" == true ]] && wait_for_ready
       ;;
@@ -245,6 +268,7 @@ main() {
   print_connection_info
   [[ "$EXAPUMP_AVAILABLE" == true ]] && prompt_data_import < "${_TTY:-/dev/tty}"
   [[ "$EXAPUMP_AVAILABLE" == true ]] && prompt_sql_session < "${_TTY:-/dev/tty}"
+  return 0
 }
 
 (return 0 2>/dev/null) || main "$@"

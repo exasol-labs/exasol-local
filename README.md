@@ -40,6 +40,10 @@ The script is **idempotent** — running it again on a machine that already has 
 - `sudo` access if Docker is not accessible without it. Is used automatically when required.
 - [exapump](https://github.com/exasol-labs/exapump) — installed automatically if not present; powers the DB readiness check, data import, and interactive SQL session
 
+## ⚠️ Limitations
+
+- Only runs locally in a single-node setup
+
 ## 🔌 Connection details
 
 | Field    | Value                  |

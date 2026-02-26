@@ -13,6 +13,10 @@ setup() {
   detect_docker_cmd() { :; }
   export DOCKER
   export -f detect_docker_cmd
+  # Default _TTY to /dev/null so tests that do not supply input do not fail
+  # when the test runner has no controlling terminal.
+  _TTY=/dev/null
+  export _TTY
 }
 
 @test "detect_docker_cmd sets DOCKER=docker when docker info succeeds" {
@@ -103,13 +107,14 @@ setup() {
   check_image_cached()    { return 1; }
   check_container_state() { echo ""; }
   create_container()      { echo "CREATE_CALLED"; }
+  prompt_volume()         { :; }
   ensure_exapump()        { :; }
   wait_for_ready()        { return 0; }
   prompt_data_import()    { :; }
   prompt_sql_session()    { :; }
   print_connection_info() { :; }
   open_admin_ui()         { :; }
-  export -f pull_image check_image_cached check_container_state create_container
+  export -f pull_image check_image_cached check_container_state create_container prompt_volume
   export -f ensure_exapump wait_for_ready prompt_data_import prompt_sql_session print_connection_info open_admin_ui
 
   run main
@@ -123,13 +128,14 @@ setup() {
   check_image_cached()    { return 0; }
   check_container_state() { echo ""; }
   create_container()      { :; }
+  prompt_volume()         { :; }
   ensure_exapump()        { :; }
   wait_for_ready()        { return 0; }
   prompt_data_import()    { :; }
   prompt_sql_session()    { :; }
   print_connection_info() { :; }
   open_admin_ui()         { :; }
-  export -f pull_image check_image_cached check_container_state create_container
+  export -f pull_image check_image_cached check_container_state create_container prompt_volume
   export -f ensure_exapump wait_for_ready prompt_data_import prompt_sql_session print_connection_info open_admin_ui
 
   run main
@@ -142,19 +148,21 @@ setup() {
   check_container_state() { echo "running"; }
   create_container()      { echo "CREATE_CALLED"; }
   start_existing()        { echo "START_CALLED"; }
+  prompt_volume()         { echo "VOLUME_CALLED"; }
   ensure_exapump()        { :; }
   wait_for_ready()        { return 0; }
   prompt_data_import()    { :; }
   prompt_sql_session()    { :; }
   print_connection_info() { :; }
   open_admin_ui()         { :; }
-  export -f check_image_cached check_container_state create_container
+  export -f check_image_cached check_container_state create_container prompt_volume
   export -f start_existing ensure_exapump wait_for_ready prompt_data_import prompt_sql_session print_connection_info open_admin_ui
 
   run main
   assert_success
   refute_output --partial "CREATE_CALLED"
   refute_output --partial "START_CALLED"
+  refute_output --partial "VOLUME_CALLED"
 }
 
 @test "script restarts stopped container without docker run" {
@@ -162,19 +170,21 @@ setup() {
   check_container_state() { echo "exited"; }
   start_existing()        { echo "START_CALLED"; }
   create_container()      { echo "CREATE_CALLED"; }
+  prompt_volume()         { echo "VOLUME_CALLED"; }
   ensure_exapump()        { :; }
   wait_for_ready()        { return 0; }
   prompt_data_import()    { :; }
   prompt_sql_session()    { :; }
   print_connection_info() { :; }
   open_admin_ui()         { :; }
-  export -f check_image_cached check_container_state start_existing
+  export -f check_image_cached check_container_state start_existing prompt_volume
   export -f create_container ensure_exapump wait_for_ready prompt_data_import prompt_sql_session print_connection_info open_admin_ui
 
   run main
   assert_success
   assert_output --partial "START_CALLED"
   refute_output --partial "CREATE_CALLED"
+  refute_output --partial "VOLUME_CALLED"
 }
 
 @test "ensure_exapump sets EXAPUMP_AVAILABLE=true when exapump is on PATH" {
@@ -223,11 +233,12 @@ setup() {
   check_image_cached()    { return 0; }
   check_container_state() { echo ""; }
   create_container()      { :; }
+  prompt_volume()         { :; }
   wait_for_ready()        { echo "WAIT_SENTINEL"; }
   prompt_data_import()    { echo "IMPORT_SENTINEL"; }
   prompt_sql_session()    { echo "SQL_SENTINEL"; }
   print_connection_info() { :; }
-  export -f detect_docker_cmd ensure_exapump check_image_cached check_container_state
+  export -f detect_docker_cmd ensure_exapump check_image_cached check_container_state prompt_volume
   export -f create_container wait_for_ready prompt_data_import prompt_sql_session print_connection_info
 
   run main
@@ -268,4 +279,59 @@ setup() {
   assert_success
   assert_output --partial "EXASOL"
   assert_output --partial "Exasol DB"
+}
+
+@test "prompt_volume sets EXA_VOLUME when user enters a path" {
+  _TTY=$(mktemp)
+  echo '/var/exa' > "$_TTY"
+  export _TTY
+  prompt_volume < "$_TTY"
+  assert_equal "$EXA_VOLUME" '/var/exa'
+  rm -f "$_TTY"
+}
+
+@test "prompt_volume uses default /var/exa when user presses Enter" {
+  _TTY=$(mktemp)
+  echo '' > "$_TTY"
+  export _TTY
+  prompt_volume < "$_TTY"
+  assert_equal "$EXA_VOLUME" '/var/exa'
+  rm -f "$_TTY"
+}
+
+@test "prompt_volume prints intro text and cyan prompt" {
+  _TTY=$(mktemp)
+  echo '' > "$_TTY"
+  export _TTY
+  run prompt_volume < "$_TTY"
+  assert_output --partial 'Local folder'
+  assert_output --partial '[/var/exa]'
+  rm -f "$_TTY"
+}
+
+@test "create_container includes --volume flag when EXA_VOLUME is set" {
+  EXA_VOLUME='/var/exa'
+  local docker_args_file
+  docker_args_file="$(mktemp)"
+  export docker_args_file
+  docker() { echo "$*" > "$docker_args_file"; }
+  mkdir() { :; }
+  export -f docker mkdir
+  create_container
+  run cat "$docker_args_file"
+  assert_output --partial '--volume /var/exa:/exa'
+  rm -f "$docker_args_file"
+}
+
+@test "create_container omits --volume flag when EXA_VOLUME is empty" {
+  EXA_VOLUME=''
+  local docker_args_file
+  docker_args_file="$(mktemp)"
+  export docker_args_file
+  docker() { echo "$*" > "$docker_args_file"; }
+  export -f docker
+  create_container
+  run cat "$docker_args_file"
+  refute_output --partial '--volume'
+  rm -f "$docker_args_file"
 }
