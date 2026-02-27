@@ -51,7 +51,6 @@ The script is **idempotent** — running it again on a machine that already has 
 | DSN      | `localhost:8563?tls=true&validateservercertificate=0`|
 | Username | `sys`                                                |
 | Password | `exasol`                                             |
-| Admin UI | https://localhost:8443                               |
 
 ## 🔁 Re-running
 

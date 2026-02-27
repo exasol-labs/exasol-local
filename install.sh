@@ -4,6 +4,7 @@ set -euo pipefail
 CONTAINER_NAME="exasol-local"
 IMAGE="exasol/docker-db:latest"
 SQL_PORT=8563
+DSN="exasol://sys:exasol@localhost:${SQL_PORT}?tls=true&validateservercertificate=0"
 STOP_TIMEOUT=120
 POLL_INTERVAL=1
 READY_TIMEOUT="${READY_TIMEOUT:-120}"
@@ -18,15 +19,15 @@ RED=$'\033[0;31m'
 DIM=$'\033[2m'
 RESET=$'\033[0m'
 _ICON_OK="${GREEN}✓${RESET}"
-_ICON_FAIL="${RED}✗${RESET}"
-_ICON_ARROW="${CYAN}›${RESET}"
 
 _SPINNER_CHARS=('⣾' '⣽' '⣻' '⢿' '⡿' '⣟' '⣯' '⣷')
 _SPINNER_PID=""
 
-log_step()    { printf "${DIM}%s${RESET}\\n" "$*"; }
-log_success() { printf "${_ICON_OK} %s\\n" "$*"; }
-log_error()   { printf "${_ICON_FAIL} %s\\n" "$*" >&2; }
+log_info()     { printf "${DIM}%s${RESET}\\n" "$*"; }
+log_error()    { printf "${RED}!${RESET} %s\\n" "$*" >&2; }
+log_warning()  { printf "${CYAN}!${RESET} %s\\n" "$*"; }
+log_question() { printf "${CYAN}?${RESET} %s" "$*"; }
+log_success()    { printf "${_ICON_OK} %s\\n" "$*"; }
 
 start_spinner() {
   local label="$1"
@@ -68,16 +69,18 @@ run_with_spinner() {
 
 print_welcome() {
   printf '\n%s%sEXASOL%s\n' "$BOLD" "$GREEN" "$RESET"
-  printf '%sRun an Exasol DB in a local Docker container%s\n\n' "$DIM" "$RESET"
-  printf '%s!%s We will now prepare your environment. Depending on your\n' "$CYAN" "$RESET"
-  printf 'system setup, we may have to run certain commands with '"'"'sudo'"'"'\n'
-  printf 'and you will be prompted to enter your password.\n\n'
+  log_info "Run an Exasol DB in a local Docker container"
+  printf '\n'
+  log_warning "We will now prepare your environment. Depending on your"
+  log_warning "system setup, we may have to run certain commands with 'sudo'"
+  log_warning "and you will be prompted to enter your password."
+  printf '\n'
 }
 
 check_docker_installed() {
   if ! command -v docker &> /dev/null; then
     log_error "Docker is not installed."
-    printf 'Install Docker from: https://docs.docker.com/engine/install/\n' >&2
+    log_warning "Install Docker from: https://docs.docker.com/engine/install/"
     exit 1
   fi
 }
@@ -92,8 +95,7 @@ detect_docker_cmd() {
   check_docker_installed
   if docker info > /dev/null 2>&1; then
     DOCKER="docker"; return
-  fi
-  if sudo docker info > /dev/null 2>&1; then
+  elif sudo docker info > /dev/null 2>&1; then
     DOCKER="sudo docker"; return
   fi
   if ! run_with_spinner "Starting Docker daemon" start_docker_daemon; then
@@ -164,7 +166,7 @@ wait_for_ready() {
   local elapsed=0
   local frame=0
   while ! exapump sql "SELECT 1" \
-      --dsn 'exasol://sys:exasol@localhost:8563?tls=true&validateservercertificate=0' \
+      --dsn "$DSN" \
       >/dev/null 2>&1; do
     if (( elapsed >= READY_TIMEOUT )); then
       printf '\r\033[2K'
@@ -184,9 +186,9 @@ wait_for_ready() {
 # Prints DSN, username, and password to stdout.
 print_connection_info() {
   printf '\n%sConnection details:%s\n' "$BOLD" "$RESET"
-  printf '%sDSN:%s      localhost:%s\n' "$DIM" "$RESET" "$SQL_PORT"
-  printf '%sUsername:%s sys\n' "$DIM" "$RESET"
-  printf '%sPassword:%s exasol\n' "$DIM" "$RESET"
+  log_info "DSN:      $DSN"
+  log_info "Username: sys"
+  log_info "Password: exasol"
 }
 
 # Checks whether exapump is available; prompts to install it if not.
@@ -195,10 +197,10 @@ ensure_exapump() {
   if command -v exapump > /dev/null 2>&1; then
     return 0
   fi
-  printf '%s!%s We could not detect exapump on your system.\n' "$RED" "$RESET"
-  printf '%s!%s exapump is a CLI for Exasol data exchange — import, export, and SQL in one command.\n' "$RED" "$RESET"
-  printf '%s!%s For more information see: https://github.com/exasol-labs/exapump\n' "$RED" "$RESET"
-  printf '%s?%s Do you want to install exapump now? [Y/n] ' "$CYAN" "$RESET"
+  log_error "We could not detect exapump on your system."
+  log_error "exapump is a CLI for Exasol data exchange — import, export, and SQL in one command."
+  log_error "For more information see: https://github.com/exasol-labs/exapump"
+  log_question "Do you want to install exapump now? [Y/n] "
   local answer
   read -r answer < "${_TTY:-/dev/tty}"
   case "$answer" in
@@ -216,17 +218,21 @@ ensure_exapump() {
 # Skips silently if the user declines.
 prompt_data_import() {
   local answer schema file table
-  printf '\n%s?%s Load a CSV or Parquet file into Exasol? [Y/n] ' "$CYAN" "$RESET"
+  printf '\n'
+  log_question "Load a CSV or Parquet file into Exasol? [Y/n] "
   read -r answer
   case "$answer" in
     [nN]) return 0 ;;
   esac
 
-  printf '%s?%s Provide the schema you want to load data into. If it does not exist, it will be created automatically.\n' "$CYAN" "$RESET"
-  printf '%s?%s Schema: ' "$CYAN" "$RESET"
+  log_info "Provide the schema you want to load data into."
+  log_info "If it does not exist, it will be created automatically."
+  log_question "Schema: "
   read -r schema
-  printf '%s?%s Path of the file you want to import. CSV or Parquet formats supported. Table name will be inferred from the name of the file.\n' "$CYAN" "$RESET"
-  printf '%s?%s File name: ' "$CYAN" "$RESET"
+
+  log_info "Path of the file you want to import. CSV or Parquet formats supported."
+  log_info "Table name will be inferred from the name of the file."
+  log_question "File name: "
   read -r file
   table="$(basename "$file")"
   table="${table%.*}"
@@ -234,12 +240,12 @@ prompt_data_import() {
   run_with_spinner "Creating schema ${schema}" \
     exapump sql \
     "CREATE SCHEMA IF NOT EXISTS ${schema}" \
-    --dsn 'exasol://sys:exasol@localhost:8563?tls=true&validateservercertificate=0'
+    --dsn "$DSN"
 
   run_with_spinner "Uploading ${file}" \
     exapump upload "$file" \
     --table "${schema}.${table}" \
-    --dsn 'exasol://sys:exasol@localhost:8563?tls=true&validateservercertificate=0'
+    --dsn "$DSN"
 }
 
 # Prompts the user for a local folder to bind-mount at /exa in the container.
@@ -247,8 +253,8 @@ prompt_data_import() {
 # Sets EXA_VOLUME to the entered path, or /var/exa if the user presses Enter.
 prompt_volume() {
   local input
-  printf '%sThe Exasol Docker container needs to mount a local folder at /exa where all Exasol data is stored.%s\n' "$DIM" "$RESET"
-  printf '%s?%s Path to the local folder to be mounted [/var/exa]: ' "$CYAN" "$RESET"
+  log_info "The Exasol Docker container needs to mount a local folder at /exa where all Exasol data is stored."
+  log_question "Path to the local folder to be mounted [/var/exa]: "
   read -r input
   EXA_VOLUME="${input:-/var/exa}"
 }
@@ -258,7 +264,8 @@ prompt_volume() {
 # Skips silently if the user declines.
 prompt_sql_session() {
   local answer
-  printf '\n%s?%s Start an interactive SQL session? [Y/n] ' "$CYAN" "$RESET"
+  printf '\n'
+  log_question "Start an interactive SQL session? [Y/n] "
   read -r answer
   case "$answer" in
     [nN]) return 0 ;;
@@ -266,7 +273,7 @@ prompt_sql_session() {
 
   printf '\n'
   exapump interactive \
-    --dsn 'exasol://sys:exasol@localhost:8563?tls=true&validateservercertificate=0'
+    --dsn "$DSN"
 }
 
 main() {
@@ -282,7 +289,7 @@ main() {
 
   case "$state" in
     running)
-      echo "Container $CONTAINER_NAME is already running."
+      log_info "Container $CONTAINER_NAME is already running."
       ;;
     exited)
       start_existing
