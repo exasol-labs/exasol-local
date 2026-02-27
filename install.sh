@@ -198,7 +198,7 @@ ensure_exapump() {
     return 0
   fi
   log_info "We could not detect exapump on your system."
-  log_info "exapump is a CLI for Exasol data exchange — import, export, and SQL in one command."
+  log_info "exapump is a CLI for Exasol data exchange."
   log_info "For more information see: https://github.com/exasol-labs/exapump"
   log_question "Do you want to install exapump now? [Y/n] "
   local answer
