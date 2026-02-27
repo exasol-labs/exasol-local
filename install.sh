@@ -85,30 +85,33 @@ check_docker_installed() {
   fi
 }
 
-start_docker_daemon() {
-  sudo systemctl start docker 2>/dev/null || sudo service docker start 2>/dev/null
-}
-
 # Sets DOCKER to "docker" if the daemon is reachable without sudo, else "sudo docker".
-# Starts the daemon if needed; exits with an error if it cannot be reached.
+# Exits with an error if the daemon is not running or docker is not accessible.
 detect_docker_cmd() {
   check_docker_installed
-  if docker info > /dev/null 2>&1; then
+  local out
+  if out=$(docker info 2>&1); then
     DOCKER="docker"; return
-  elif sudo docker info > /dev/null 2>&1; then
-    DOCKER="sudo docker"; return
   fi
-  if ! run_with_spinner "Starting Docker daemon" start_docker_daemon; then
-    log_error "Docker daemon could not be started."
+  if [[ "$out" == *"Is the docker daemon running"* ]]; then
+    log_error "Docker daemon is not running. Please start it and try again."
     exit 1
   fi
-  if docker info > /dev/null 2>&1; then
-    DOCKER="docker"; return
+  if [[ "$out" != *"permission denied"* ]]; then
+    log_error "We can't run 'docker'. Please check your Docker installation."
+    exit 1
   fi
-  if sudo docker info > /dev/null 2>&1; then
+  log_warning "We're now checking if 'docker' needs to run with 'sudo'."
+  log_warning "You may have to enter your password."
+  if out=$(sudo docker info 2>&1); then
+    log_success "'docker' needs to run with 'sudo'. We'll use 'sudo docker' for all commands."
     DOCKER="sudo docker"; return
   fi
-  log_error "Docker daemon started but is still unreachable."
+  if [[ "$out" == *"Is the docker daemon running"* ]]; then
+    log_error "Docker daemon is not running. Please start it and try again."
+    exit 1
+  fi
+  log_error "We can't run 'docker' with or without 'sudo'. Please check your Docker installation and permissions."
   exit 1
 }
 
@@ -211,6 +214,7 @@ ensure_exapump() {
   esac
   run_with_spinner "Installing exapump" \
     sh -c 'curl -fsSL https://raw.githubusercontent.com/exasol-labs/exapump/main/install.sh | sh'
+  printf '\n'
 }
 
 # Prompts the user to optionally load a CSV or Parquet file via exapump.

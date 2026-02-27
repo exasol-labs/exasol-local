@@ -26,9 +26,14 @@ setup() {
   assert_equal "$DOCKER" "docker"
 }
 
-@test "detect_docker_cmd sets DOCKER='sudo docker' when docker info fails" {
+@test "detect_docker_cmd sets DOCKER='sudo docker' when docker info returns permission denied" {
   source "$SCRIPT"  # restore real detect_docker_cmd
-  docker() { return 1; }
+  docker() {
+    if [[ "$1" == "info" ]]; then
+      echo "Got permission denied while trying to connect to the Docker daemon socket" >&2
+      return 1
+    fi
+  }
   sudo() {
     if [[ "$1" == "docker" && "$2" == "info" ]]; then return 0; fi
     return 1
@@ -258,36 +263,39 @@ setup() {
   assert_output --partial "https://docs.docker.com/engine/install/"
 }
 
-@test "detect_docker_cmd starts daemon when not running" {
+@test "detect_docker_cmd exits when docker daemon is not running" {
   source "$SCRIPT"  # restore real detect_docker_cmd
-  local _daemon_started_flag
-  _daemon_started_flag="$(mktemp)"
-  rm -f "$_daemon_started_flag"
-  export _daemon_started_flag
   docker() {
     if [[ "$1" == "info" ]]; then
-      [[ -f "$_daemon_started_flag" ]] && return 0
+      echo "Cannot connect to the Docker daemon. Is the docker daemon running?" >&2
+      return 1
+    fi
+  }
+  export -f docker
+  run detect_docker_cmd
+  assert_failure
+  assert_output --partial "not running"
+}
+
+@test "detect_docker_cmd exits when sudo docker daemon is not running" {
+  source "$SCRIPT"  # restore real detect_docker_cmd
+  docker() {
+    if [[ "$1" == "info" ]]; then
+      echo "Got permission denied while trying to connect to the Docker daemon socket" >&2
+      return 1
+    fi
+  }
+  sudo() {
+    if [[ "$1" == "docker" && "$2" == "info" ]]; then
+      echo "Cannot connect to the Docker daemon. Is the docker daemon running?" >&2
       return 1
     fi
     return 1
   }
-  sudo() { return 1; }
-  start_docker_daemon() { touch "$_daemon_started_flag"; return 0; }
-  export -f docker sudo start_docker_daemon
-  detect_docker_cmd
-  assert_equal "$DOCKER" "docker"
-  rm -f "$_daemon_started_flag"
-}
-
-@test "detect_docker_cmd exits when daemon cannot be started" {
-  source "$SCRIPT"  # restore real detect_docker_cmd
-  docker() { return 1; }
-  sudo() { return 1; }
-  start_docker_daemon() { return 1; }
-  export -f docker sudo start_docker_daemon
+  export -f docker sudo
   run detect_docker_cmd
   assert_failure
-  assert_output --partial "could not be started"
+  assert_output --partial "not running"
 }
 
 @test "log_success outputs success icon and message" {
