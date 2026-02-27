@@ -3,7 +3,6 @@
   <source srcset="static/Exasol_Logo_2025_Bright.svg" media="(prefers-color-scheme: dark)">
   <img src="static/Exasol_Logo_2025_Dark.svg" alt="Exasol Logo" width="300">
 </picture>
-<h1>Local</h1>
 <p>Run a local <a href=="https://www.exasol.com">Exasol</a> database in minutes — one command, no configuration.</>
 </div>
 
