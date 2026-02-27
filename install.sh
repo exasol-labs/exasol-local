@@ -97,10 +97,11 @@ detect_docker_cmd() {
     log_error "We can't run 'docker'. Please check your Docker installation."
     exit 1
   fi
-  log_warning "We're now checking if 'docker' needs to run with 'sudo'."
+  log_warning "We're checking if 'docker' needs to run with 'sudo'."
   log_warning "You may have to enter your password."
   if out=$(sudo docker info 2>&1); then
-    log_success "'docker' needs to run with 'sudo'. We'll use 'sudo docker' for all commands.\n"
+    log_success "'docker' needs to run with 'sudo'. We'll use 'sudo docker' for all commands."
+    printf '\n'
     DOCKER="sudo docker"; return
   fi
   if [[ "$out" == *"Is the docker daemon running"* ]]; then
@@ -198,6 +199,7 @@ ensure_exapump() {
   fi
   log_info "We could not detect exapump on your system."
   log_info "exapump is a CLI for Exasol data exchange."
+  log_info "We need to load your data immediately after installation."
   log_info "For more information see: https://github.com/exasol-labs/exapump"
   log_question "Do you want to install exapump now? [Y/n] "
   local answer
