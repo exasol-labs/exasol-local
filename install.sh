@@ -50,7 +50,6 @@ stop_spinner() {
 
 run_with_spinner() {
   local label="$1"; shift
-  printf "${DIM}$ %s${RESET}\n" "$*"
   local tmpfile
   tmpfile="$(mktemp)"
   start_spinner "$label"
@@ -67,12 +66,6 @@ run_with_spinner() {
   return $rc
 }
 
-# Echoes the command in dim color, then runs it directly (no spinner).
-run_direct() {
-  printf "${DIM}$ %s${RESET}\n" "$*"
-  "$@"
-}
-
 print_welcome() {
   printf '\n%s%sEXASOL%s\n' "$BOLD" "$GREEN" "$RESET"
   printf '%sRun an Exasol DB in a local Docker container%s\n\n' "$DIM" "$RESET"
@@ -81,13 +74,40 @@ print_welcome() {
   printf 'and you will be prompted to enter your password.\n\n'
 }
 
-# Sets DOCKER to "docker" if the daemon is reachable without sudo, else "sudo docker".
-detect_docker_cmd() {
-  if docker info > /dev/null 2>&1; then
-    DOCKER="docker"
-  else
-    DOCKER="sudo docker"
+check_docker_installed() {
+  if ! command -v docker &> /dev/null; then
+    log_error "Docker is not installed."
+    printf 'Install Docker from: https://docs.docker.com/engine/install/\n' >&2
+    exit 1
   fi
+}
+
+start_docker_daemon() {
+  sudo systemctl start docker 2>/dev/null || sudo service docker start 2>/dev/null
+}
+
+# Sets DOCKER to "docker" if the daemon is reachable without sudo, else "sudo docker".
+# Starts the daemon if needed; exits with an error if it cannot be reached.
+detect_docker_cmd() {
+  check_docker_installed
+  if docker info > /dev/null 2>&1; then
+    DOCKER="docker"; return
+  fi
+  if sudo docker info > /dev/null 2>&1; then
+    DOCKER="sudo docker"; return
+  fi
+  if ! run_with_spinner "Starting Docker daemon" start_docker_daemon; then
+    log_error "Docker daemon could not be started."
+    exit 1
+  fi
+  if docker info > /dev/null 2>&1; then
+    DOCKER="docker"; return
+  fi
+  if sudo docker info > /dev/null 2>&1; then
+    DOCKER="sudo docker"; return
+  fi
+  log_error "Docker daemon started but is still unreachable."
+  exit 1
 }
 
 # Returns 0 if the Docker image is already present locally.
@@ -245,7 +265,7 @@ prompt_sql_session() {
   esac
 
   printf '\n'
-  run_direct exapump interactive \
+  exapump interactive \
     --dsn 'exasol://sys:exasol@localhost:8563?tls=true&validateservercertificate=0'
 }
 

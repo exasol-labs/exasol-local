@@ -27,16 +27,13 @@ setup() {
 }
 
 @test "detect_docker_cmd sets DOCKER='sudo docker' when docker info fails" {
-  # setup() stubs detect_docker_cmd; restore the real implementation here
-  detect_docker_cmd() {
-    if docker info > /dev/null 2>&1; then
-      DOCKER="docker"
-    else
-      DOCKER="sudo docker"
-    fi
-  }
+  source "$SCRIPT"  # restore real detect_docker_cmd
   docker() { return 1; }
-  export -f docker
+  sudo() {
+    if [[ "$1" == "docker" && "$2" == "info" ]]; then return 0; fi
+    return 1
+  }
+  export -f docker sudo
   detect_docker_cmd
   assert_equal "$DOCKER" "sudo docker"
 }
@@ -248,6 +245,51 @@ setup() {
   refute_output --partial "SQL_SENTINEL"
 }
 
+@test "detect_docker_cmd exits when docker not installed" {
+  source "$SCRIPT"  # restore real detect_docker_cmd and check_docker_installed
+  command() {
+    if [[ "$1" == "-v" && "$2" == "docker" ]]; then return 1; fi
+    builtin command "$@"
+  }
+  export -f command
+  run detect_docker_cmd
+  assert_failure
+  assert_output --partial "Docker is not installed."
+  assert_output --partial "https://docs.docker.com/engine/install/"
+}
+
+@test "detect_docker_cmd starts daemon when not running" {
+  source "$SCRIPT"  # restore real detect_docker_cmd
+  local _daemon_started_flag
+  _daemon_started_flag="$(mktemp)"
+  rm -f "$_daemon_started_flag"
+  export _daemon_started_flag
+  docker() {
+    if [[ "$1" == "info" ]]; then
+      [[ -f "$_daemon_started_flag" ]] && return 0
+      return 1
+    fi
+    return 1
+  }
+  sudo() { return 1; }
+  start_docker_daemon() { touch "$_daemon_started_flag"; return 0; }
+  export -f docker sudo start_docker_daemon
+  detect_docker_cmd
+  assert_equal "$DOCKER" "docker"
+  rm -f "$_daemon_started_flag"
+}
+
+@test "detect_docker_cmd exits when daemon cannot be started" {
+  source "$SCRIPT"  # restore real detect_docker_cmd
+  docker() { return 1; }
+  sudo() { return 1; }
+  start_docker_daemon() { return 1; }
+  export -f docker sudo start_docker_daemon
+  run detect_docker_cmd
+  assert_failure
+  assert_output --partial "could not be started"
+}
+
 @test "log_success outputs success icon and message" {
   run log_success "step done"
   assert_success
@@ -272,18 +314,6 @@ setup() {
   assert_failure
   assert_output --partial "bad step"
   assert_output --partial "captured noise"
-}
-
-@test "run_with_spinner prints command in dim before spinner" {
-  run run_with_spinner "test step" echo hello
-  assert_success
-  assert_output --partial $'\033[2m$ echo hello'
-}
-
-@test "run_direct prints command in dim before running" {
-  run run_direct echo hello
-  assert_success
-  assert_output --partial $'\033[2m$ echo hello'
 }
 
 @test "print_welcome outputs EXASOL banner" {
