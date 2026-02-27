@@ -274,11 +274,35 @@ setup() {
   assert_output --partial "captured noise"
 }
 
+@test "run_with_spinner prints command in dim before spinner" {
+  run run_with_spinner "test step" echo hello
+  assert_success
+  assert_output --partial $'\033[2m$ echo hello'
+}
+
+@test "run_direct prints command in dim before running" {
+  run run_direct echo hello
+  assert_success
+  assert_output --partial $'\033[2m$ echo hello'
+}
+
 @test "print_welcome outputs EXASOL banner" {
   run print_welcome
   assert_success
   assert_output --partial "EXASOL"
   assert_output --partial "Exasol DB"
+}
+
+@test "print_welcome lines do not exceed 79 characters" {
+  run print_welcome
+  assert_success
+  stripped="$(printf '%s' "$output" | sed 's/\x1b\[[0-9;]*m//g')"
+  while IFS= read -r line; do
+    local len="${#line}"
+    if (( len > 79 )); then
+      fail "Line exceeds 79 characters (${len}): ${line}"
+    fi
+  done <<< "$stripped"
 }
 
 @test "prompt_volume sets EXA_VOLUME when user enters a path" {

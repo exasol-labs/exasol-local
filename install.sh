@@ -50,6 +50,7 @@ stop_spinner() {
 
 run_with_spinner() {
   local label="$1"; shift
+  printf "${DIM}$ %s${RESET}\n" "$*"
   local tmpfile
   tmpfile="$(mktemp)"
   start_spinner "$label"
@@ -66,10 +67,18 @@ run_with_spinner() {
   return $rc
 }
 
+# Echoes the command in dim color, then runs it directly (no spinner).
+run_direct() {
+  printf "${DIM}$ %s${RESET}\n" "$*"
+  "$@"
+}
+
 print_welcome() {
   printf '\n%s%sEXASOL%s\n' "$BOLD" "$GREEN" "$RESET"
-  printf '%s%Run an Exasol DB in a local Docker container%s%\n\n' "$DIM" "$RESET"
-  printf '%s?%s Let''s prepare your environment.\n\n' "$CYAN" "$RESET"
+  printf '%sRun an Exasol DB in a local Docker container%s\n\n' "$DIM" "$RESET"
+  printf '%s!%s We will now prepare your environment. Depending on your\n' "$CYAN" "$RESET"
+  printf 'system setup, we may have to run certain commands with '"'"'sudo'"'"'\n'
+  printf 'and you will be prompted to enter your password.\n\n'
 }
 
 # Sets DOCKER to "docker" if the daemon is reachable without sudo, else "sudo docker".
@@ -236,7 +245,7 @@ prompt_sql_session() {
   esac
 
   printf '\n'
-  exapump interactive \
+  run_direct exapump interactive \
     --dsn 'exasol://sys:exasol@localhost:8563?tls=true&validateservercertificate=0'
 }
 

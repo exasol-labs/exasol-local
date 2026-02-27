@@ -4,7 +4,7 @@
   <img src="static/Exasol_Logo_2025_Dark.svg" alt="Exasol Logo" width="300">
 </picture>
 <h1>Local</h1>
-<p>Run a local <a href=="https://www.exasol.com">Exasol</a> database in seconds — one command, no configuration.</>
+<p>Run a local <a href=="https://www.exasol.com">Exasol</a> database in minutes — one command, no configuration.</>
 </div>
 
 <p align="center">
@@ -46,12 +46,12 @@ The script is **idempotent** — running it again on a machine that already has 
 
 ## 🔌 Connection details
 
-| Field    | Value                  |
-|----------|------------------------|
-| DSN      | `localhost:8563`       |
-| Username | `sys`                  |
-| Password | `exasol`               |
-| Admin UI | https://localhost:8443 |
+| Field    | Value                                                |
+|----------|------------------------------------------------------|
+| DSN      | `localhost:8563?tls=true&validateservercertificate=0`|
+| Username | `sys`                                                |
+| Password | `exasol`                                             |
+| Admin UI | https://localhost:8443                               |
 
 ## 🔁 Re-running
 
