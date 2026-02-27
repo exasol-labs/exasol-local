@@ -24,8 +24,8 @@ _SPINNER_CHARS=('⣾' '⣽' '⣻' '⢿' '⡿' '⣟' '⣯' '⣷')
 _SPINNER_PID=""
 
 log_info()     { printf "${DIM}%s${RESET}\\n" "$*"; }
-log_error()    { printf "${RED}!${RESET} %s\\n" "$*" >&2; }
-log_warning()  { printf "${CYAN}!${RESET} %s\\n" "$*"; }
+log_error()    { printf "${RED}! %s${RESET}\\n" "$*" >&2; }
+log_warning()  { printf "${CYAN}→${RESET} %s\\n" "$*"; }
 log_question() { printf "${CYAN}?${RESET} %s" "$*"; }
 log_success()    { printf "${_ICON_OK} %s\\n" "$*"; }
 
