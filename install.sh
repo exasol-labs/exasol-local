@@ -71,10 +71,6 @@ print_welcome() {
   printf '\n%s%sEXASOL%s\n' "$BOLD" "$GREEN" "$RESET"
   log_info "Run an Exasol DB in a local Docker container"
   printf '\n'
-  log_warning "We will now prepare your environment. Depending on your"
-  log_warning "system setup, we may have to run certain commands with 'sudo'"
-  log_warning "and you will be prompted to enter your password."
-  printf '\n'
 }
 
 check_docker_installed() {
@@ -104,7 +100,7 @@ detect_docker_cmd() {
   log_warning "We're now checking if 'docker' needs to run with 'sudo'."
   log_warning "You may have to enter your password."
   if out=$(sudo docker info 2>&1); then
-    log_success "'docker' needs to run with 'sudo'. We'll use 'sudo docker' for all commands."
+    log_success "'docker' needs to run with 'sudo'. We'll use 'sudo docker' for all commands.\n"
     DOCKER="sudo docker"; return
   fi
   if [[ "$out" == *"Is the docker daemon running"* ]]; then
