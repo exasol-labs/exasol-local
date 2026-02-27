@@ -68,7 +68,7 @@ run_with_spinner() {
 
 print_welcome() {
   printf '\n%s%sEXASOL%s\n' "$BOLD" "$GREEN" "$RESET"
-  printf 'Run an Exasol DB in a local Docker container\n\n' "$DIM" "$RESET"
+  printf '%s%Run an Exasol DB in a local Docker container%s%\n\n' "$DIM" "$RESET"
   printf '%s?%s Let''s prepare your environment.\n\n' "$CYAN" "$RESET"
 }
 
