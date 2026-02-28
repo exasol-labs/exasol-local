@@ -397,3 +397,64 @@ setup() {
   refute_output --partial '--volume'
   rm -f "$docker_args_file"
 }
+
+@test "platform detection sets Linux image on non-Darwin" {
+  uname() { echo "Linux"; }
+  export -f uname
+  detect_platform
+  assert_equal "$IMAGE" "exasol/docker-db:latest"
+  assert_equal "$DEFAULT_EXA_VOLUME" "/var/exa"
+}
+
+@test "platform detection sets macOS image on Darwin" {
+  uname() { echo "Darwin"; }
+  export -f uname
+  detect_platform
+  assert_equal "$IMAGE" "public.ecr.aws/r1d8t6u3/exasol:2025.2.0-arm64dev.0"
+  assert_equal "$DEFAULT_EXA_VOLUME" "$HOME/.exasol/exa"
+}
+
+@test "ecr login workaround is called on Darwin" {
+  local docker_calls_file
+  docker_calls_file="$(mktemp)"
+  export docker_calls_file
+  docker() { echo "$*" >> "$docker_calls_file"; }
+  uname() {
+    if [[ "${1-}" == "-m" ]]; then echo "arm64"; else echo "Darwin"; fi
+  }
+  export -f docker uname
+  detect_platform
+  run grep -q "login public.ecr.aws" "$docker_calls_file"
+  assert_success
+  rm -f "$docker_calls_file"
+}
+
+@test "ecr login workaround is not called on Linux" {
+  local docker_calls_file
+  docker_calls_file="$(mktemp)"
+  export docker_calls_file
+  docker() { echo "$*" >> "$docker_calls_file"; }
+  uname() {
+    if [[ "${1-}" == "-m" ]]; then echo "x86_64"; else echo "Linux"; fi
+  }
+  export -f docker uname
+  detect_platform
+  run grep -q "login public.ecr.aws" "$docker_calls_file"
+  assert_failure
+  rm -f "$docker_calls_file"
+}
+
+@test "pull_image calls docker pull directly without spinner" {
+  DOCKER="echo"
+  IMAGE="test-image:latest"
+  run_with_spinner() { echo "SPINNER_CALLED $*"; }
+  export DOCKER IMAGE
+  export -f run_with_spinner
+
+  run pull_image
+  assert_success
+  assert_output --partial "test-image:latest"
+  assert_output --partial "We didn't find the Exasol Docker image locally."
+  assert_output --partial "This make take a few minutes"
+  refute_output --partial "SPINNER_CALLED"
+}

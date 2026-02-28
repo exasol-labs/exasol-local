@@ -18,10 +18,18 @@ Provides a polished terminal experience during installation: a welcome banner, a
 
 ### Scenario: Progress spinner shown for long-running steps
 
-* *GIVEN* the installer is running a long-running operation (image pull, container create, container start, database readiness wait, or exapump installation)
+* *GIVEN* the installer is running a long-running operation (container create, container start, database readiness wait, or exapump installation)
 * *WHEN* the operation is in progress
 * *THEN* the script SHALL display an animated braille spinner next to a human-readable step label
 * *AND* the script SHALL update the spinner animation in place without scrolling
+
+### Scenario: Image pull displays native Docker layer progress
+
+* *GIVEN* the platform-selected image is not present locally
+* *WHEN* `pull_image` is called
+* *THEN* the script SHALL invoke `docker pull` with stdout and stderr connected directly to the terminal
+* *AND* the script SHALL NOT wrap the pull in `run_with_spinner`
+* *AND* Docker SHALL display its native per-layer download progress with percentage and byte counts
 
 ### Scenario: Command output suppressed; replayed on failure
 
@@ -47,4 +55,5 @@ Provides a polished terminal experience during installation: a welcome banner, a
 | Welcome banner displayed at startup | Unit | `tests/start_container.bats` |
 | Progress spinner shown for long-running steps | Unit | `tests/start_container.bats` |
 | Command output suppressed; replayed on failure | Unit | `tests/start_container.bats` |
+| Image pull displays native Docker layer progress | Unit | `tests/start_container.bats` |
 | Input prompts visually distinguished from informational output | Unit | `tests/start_container.bats` |

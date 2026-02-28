@@ -2,7 +2,6 @@
 set -euo pipefail
 
 CONTAINER_NAME="exasol-local"
-IMAGE="exasol/docker-db:latest"
 SQL_PORT=8563
 DSN="exasol://sys:exasol@localhost:${SQL_PORT}?tls=true&validateservercertificate=0"
 STOP_TIMEOUT=120
@@ -10,6 +9,7 @@ POLL_INTERVAL=1
 READY_TIMEOUT="${READY_TIMEOUT:-120}"
 EXAPUMP_AVAILABLE=true
 EXA_VOLUME=""
+DEFAULT_EXA_VOLUME="/var/exa"
 
 # ── UI: ANSI color codes and icon constants ─────────────────────────────────
 BOLD=$'\033[1m'
@@ -23,11 +23,28 @@ _ICON_OK="${GREEN}✓${RESET}"
 _SPINNER_CHARS=('⣾' '⣽' '⣻' '⢿' '⡿' '⣟' '⣯' '⣷')
 _SPINNER_PID=""
 
+# Detects the host OS and sets IMAGE and DEFAULT_EXA_VOLUME for the platform.
+detect_platform() {
+  if [[ "$(uname)" == "Darwin" && "$(uname -m)" == "arm64" ]]; then
+    IMAGE="public.ecr.aws/r1d8t6u3/exasol:2025.2.0-arm64dev.0"
+    DEFAULT_EXA_VOLUME="$HOME/.exasol/exa"
+    # WORKAROUND: AWS ECR public requires an explicit login on macOS/arm64 or image
+    # pulls may silently fail. Remove this once AWS resolves the issue.
+    docker login public.ecr.aws >/dev/null 2>&1 || true
+  elif [[ "$(uname)" == "Linux" && "$(uname -m)" == "x86_64" ]]; then
+    IMAGE="exasol/docker-db:latest"
+    DEFAULT_EXA_VOLUME="/var/exa"
+  else
+    log_error "Unsupported platform: $(uname) ($(uname -m)). This script only supports Linux (x86_64) and macOS (arm64)."
+    exit 1
+  fi
+}
+
 log_info()     { printf "${DIM}%s${RESET}\\n" "$*"; }
 log_error()    { printf "${RED}! %s${RESET}\\n" "$*" >&2; }
 log_warning()  { printf "${CYAN}→${RESET} %s\\n" "$*"; }
 log_question() { printf "${CYAN}?${RESET} %s" "$*"; }
-log_success()    { printf "${_ICON_OK} %s\\n" "$*"; }
+log_success()  { printf "${_ICON_OK} %s\\n" "$*"; }
 
 start_spinner() {
   local label="$1"
@@ -68,8 +85,8 @@ run_with_spinner() {
 }
 
 print_welcome() {
-  printf '\n%s%sEXASOL%s\n' "$BOLD" "$GREEN" "$RESET"
-  log_info "Run an Exasol DB in a local Docker container"
+  printf '\n%s%sEXASOL local%s\n' "$BOLD" "$GREEN" "$RESET"
+  log_info "Run an Exasol database in a local Docker container"
   printf '\n'
 }
 
@@ -108,19 +125,20 @@ detect_docker_cmd() {
     log_error "Docker daemon is not running. Please start it and try again."
     exit 1
   fi
-  log_error "We can't run 'docker' with or without 'sudo'. Please check your Docker installation and permissions."
+  log_error "We can't run 'docker' with or without 'sudo'."
+  log_error "Please check your Docker installation and permissions."
   exit 1
-}
-
-# Returns 0 if the Docker image is already present locally.
-check_image_cached() {
-  $DOCKER image inspect "$IMAGE" > /dev/null 2>&1
 }
 
 # Pulls the Docker image from the registry.
 pull_image() {
   # shellcheck disable=SC2086
-  run_with_spinner "Pulling $IMAGE" $DOCKER pull "$IMAGE"
+  log_info "Let us pull the Exasol Docker image."
+  log_info "This make take a few minutes depending on"
+  log_info "whether you have pulled the image before"
+  log_info "and on how fast your internet connection is."
+  $DOCKER pull "$IMAGE"
+  printf '\n'
 }
 
 # Outputs the current state of the named container, or empty string if absent.
@@ -199,7 +217,8 @@ ensure_exapump() {
   fi
   log_info "We could not detect exapump on your system."
   log_info "exapump is a CLI for Exasol data exchange."
-  log_info "We need to load your data immediately after installation."
+  log_info "We need it to probe the database after installation"
+  log_info "and to optionally import data and start an interactive SQL session."
   log_info "For more information see: https://github.com/exasol-labs/exapump"
   log_question "Do you want to install exapump now? [Y/n] "
   local answer
@@ -252,13 +271,14 @@ prompt_data_import() {
 
 # Prompts the user for a local folder to bind-mount at /exa in the container.
 # Reads from stdin; main() redirects from /dev/tty so this works even in curl|sh.
-# Sets EXA_VOLUME to the entered path, or /var/exa if the user presses Enter.
+# Sets EXA_VOLUME to the entered path, or DEFAULT_EXA_VOLUME if the user presses Enter.
 prompt_volume() {
   local input
-  log_info "The Exasol Docker container needs to mount a local folder at /exa where all Exasol data is stored."
-  log_question "Path to the local folder to be mounted [/var/exa]: "
+  log_info "The Exasol Docker container needs to mount a local folder"
+  log_info "at /exa where all Exasol data is stored."
+  log_question "Path to the local folder to be mounted [$DEFAULT_EXA_VOLUME]: "
   read -r input
-  EXA_VOLUME="${input:-/var/exa}"
+  EXA_VOLUME="${input:-$DEFAULT_EXA_VOLUME}"
 }
 
 # Prompts the user to optionally start an interactive SQL session via exapump.
@@ -279,12 +299,11 @@ prompt_sql_session() {
 }
 
 main() {
+  detect_platform
   print_welcome
   detect_docker_cmd
   ensure_exapump
-  if ! check_image_cached; then
-    pull_image
-  fi
+  pull_image
 
   local state
   state="$(check_container_state)"

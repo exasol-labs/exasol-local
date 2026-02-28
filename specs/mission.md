@@ -30,12 +30,10 @@ No existing tool provides a true zero-configuration, single-command local Exasol
 2. **Docker auto-install** — detects whether Docker Engine is present; installs it if not
 3. **Exasol container setup** — pulls and starts the official Exasol Docker image with sensible defaults
 4. **Connection details output** — prints DSN, username, and password ready to paste into any SQL client
-5. **Admin UI launch** — automatically opens the Exasol Admin UI in the default browser
 
 ## Out of Scope
 
 - **Windows** — not supported
-- **macOS** — deferred; Linux is the initial target platform
 - **Production or cloud deployment** — local development use only; not hardened for production
 - **Exasol SaaS / Cloud** — self-hosted Docker only, no Exasol Cloud provisioning
 - **Custom Exasol configuration** — default container settings only; no advanced tuning
@@ -109,7 +107,7 @@ Container lifecycle logic lives in `install.sh` and is directly testable via bat
 
 ## Constraints
 
-- **Linux only** — initial target platform; macOS support is deferred
+- **Linux and macOS (Darwin/arm64)** — supported platforms
 - **No runtime dependencies** beyond what the script installs — users run it on a fresh machine
 - **Non-destructive** — re-running the installer on a machine that already has Docker and
   Exasol running must be safe (idempotent)

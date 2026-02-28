@@ -1,42 +1,6 @@
 #!/usr/bin/env bash
-# End-to-end test for install.sh.
-# SSHes to the remote Linux host and simulates a real user installation.
-#
-# Prerequisites (see remote/README.md):
-#   remote/host     — hostname or IP of the remote Linux machine
-#   remote/key.pem  — SSH private key with access to that machine
-#
-# Run via: make e2e-tests
-set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-REMOTE_HOST_FILE="$SCRIPT_DIR/remote/host"
-REMOTE_KEY="$SCRIPT_DIR/remote/key.pem"
-REMOTE_USER="${REMOTE_USER:-ubuntu}"
-CONTAINER="exasol-local"
-INSTALL_CMD="curl -fsSL https://raw.githubusercontent.com/juergen-albertsen-exasol/exasol-local/main/install.sh | bash"
-
-if [[ ! -f "$REMOTE_HOST_FILE" ]]; then
-  echo "ERROR: $REMOTE_HOST_FILE not found. See remote/README.md" >&2
-  exit 1
-fi
-
-if [[ ! -f "$REMOTE_KEY" ]]; then
-  echo "ERROR: $REMOTE_KEY not found. See remote/README.md" >&2
-  exit 1
-fi
-
-REMOTE_HOST="$(cat "$REMOTE_HOST_FILE")"
-
-ssh_remote() {
-  ssh -i "$REMOTE_KEY" -o StrictHostKeyChecking=no "${REMOTE_USER}@${REMOTE_HOST}" "$@"
-}
-
-echo "==> Removing existing container (if any) on ${REMOTE_HOST} ..."
-ssh_remote "sudo docker rm -f $CONTAINER 2>/dev/null || true"
-
-echo "==> Running install.sh on remote host ..."
-ssh_remote "bash -l -c '$INSTALL_CMD'"
-
-echo ""
-echo "==> e2e test PASSED"
+docker rm -f exasol-local >/dev/null 2>&1
+rm -rf ~/.exasol/exa
+rm -f ~/.local/bin/exapump
+./install.sh
