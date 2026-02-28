@@ -2,3 +2,4 @@ remote/*
 !remote/README.md
 .vscode
 .serena
+.DS_Store

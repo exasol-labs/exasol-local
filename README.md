@@ -21,6 +21,8 @@
 curl -fsSL https://raw.githubusercontent.com/exasol-labs/exasol-local/main/install.sh | bash
 ```
 
+Works on Linux x86 🐧 or on macOS ARM 🍎
+
 ## ⚙️ What it does
 
 1. Pulls the official `exasol/docker-db` Docker image (skipped if already cached)
@@ -34,10 +36,10 @@ The script is **idempotent** — running it again on a machine that already has 
 
 ## 📋 Requirements
 
-- Linux on an x86_64 architecture
-- [Docker Engine](https://docs.docker.com/engine/install/)
-- `sudo` access if Docker is not accessible without it. Is used automatically when required.
-- [exapump](https://github.com/exasol-labs/exapump) — installed automatically if not present; powers the DB readiness check, data import, and interactive SQL session
+- 🐧 Linux on x86 architecture or 🍎 macOS on an ARM  architecure
+- 🐳 [Docker Engine](https://docs.docker.com/engine/install/)
+- 🪄 `sudo` access if Docker is not accessible without it. Is used automatically when required.
+- ⛽︎ [exapump](https://github.com/exasol-labs/exapump) — installed automatically if not present; powers the DB readiness check, data import, and interactive SQL session
 
 ## ⚠️ Limitations
 
